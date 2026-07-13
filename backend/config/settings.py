@@ -89,6 +89,13 @@ else:
         }
     }
 
+import os
+
+BLOCKCHAIN_RPC_URL = os.getenv("BLOCKCHAIN_RPC_URL")
+ROLE_MANAGER_ADDRESS = os.getenv("ROLE_MANAGER_ADDRESS")
+KYC_REGISTRY_ADDRESS = os.getenv("KYC_REGISTRY_ADDRESS")
+CHAIN_ID = int(os.getenv("CHAIN_ID", 31337))
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

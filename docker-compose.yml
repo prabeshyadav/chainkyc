@@ -12,30 +12,42 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  ganache:
-    image: trufflesuite/ganache-cli:latest
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    command: -anvil 
+              - --host
+              - 0.0.0.0
+              ---port
+              - "8545"
+
     ports:
       - "8545:8545"
-    command: ganache-cli -h 0.0.0.0 --deterministic
+    
 
   web:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8001:8001"
     env_file:
       - .env
     environment:
       POSTGRES_HOST: db
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-      BLOCKCHAIN_RPC_URL: http://ganache:8545
+      BLOCKCHAIN_RPC_URL: ${BLOCKCHAIN_RPC_URL}
+      ROLE_MANAGER_ADDRESS: ${ROLE_MANAGER_ADDRESS}
+      KYC_REGISTRY_ADDRESS: ${KYC_REGISTRY_ADDRESS}
+      CHAIN_ID: ${CHAIN_ID}
     depends_on:
       db:
         condition: service_healthy
-      ganache:
+      anvil:
         condition: service_started
     volumes:
       - ./backend:/app
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8001 --workers 3 --reload
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     image: node:22-alpine
