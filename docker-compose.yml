@@ -12,17 +12,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - kyc_network
+
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest
-    command: -anvil 
-              - --host
-              - 0.0.0.0
-              ---port
-              - "8545"
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+    command: ["anvil", "--port", "8545"]
 
     ports:
       - "8545:8545"
-    
+    networks:
+      - kyc_network
 
   web:
     build: ./backend
@@ -45,9 +47,10 @@ services:
     volumes:
       - ./backend:/app
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8001 --workers 3 --reload
-
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - kyc_network
 
   frontend:
     image: node:22-alpine
@@ -58,11 +61,17 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     environment:
-      VITE_API_BASE_URL: http://localhost:8000/api
+      VITE_API_BASE_URL: http://localhost:8001/api
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       - web
+    networks:
+      - kyc_network
 
 volumes:
   postgres_data:
   frontend_node_modules:
+
+networks:
+  kyc_network:
+    driver: bridge
