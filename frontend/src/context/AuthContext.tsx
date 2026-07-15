@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { BrowserProvider } from 'ethers'
 import {
   api,
@@ -9,10 +10,20 @@ import {
   saveWallet,
 } from '../api/client'
 
-const AuthContext = createContext(null)
+interface AuthContextValue {
+  walletAddress: string | null
+  authenticated: boolean
+  loading: boolean
+  error: string
+  connectAndLogin: () => Promise<string>
+  logout: () => void
+  setError: (error: string) => void
+}
 
-export function AuthProvider({ children }) {
-  const [walletAddress, setWalletAddress] = useState(getStoredWallet())
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [walletAddress, setWalletAddress] = useState<string | null>(getStoredWallet())
   const [authenticated, setAuthenticated] = useState(isAuthenticated())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -41,7 +52,7 @@ export function AuthProvider({ children }) {
       setAuthenticated(true)
       return address
     } catch (err) {
-      const message = err?.message || 'Wallet login failed.'
+      const message = err instanceof Error ? err.message : 'Wallet login failed.'
       setError(message)
       throw err
     } finally {
@@ -72,7 +83,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth must be used within AuthProvider')

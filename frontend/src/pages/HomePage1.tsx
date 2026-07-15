@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import type { HealthStatus } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import KycForm from '../components/KycForm'
 import WalletLogin from '../components/WalletLogin'
 
-function shortenAddress(address) {
+function shortenAddress(address: string | null): string {
   if (!address) return ''
   return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
 export default function HomePage() {
   const { authenticated, walletAddress, logout } = useAuth()
-  const [health, setHealth] = useState(null)
+  const [health, setHealth] = useState<HealthStatus | null>(null)
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth(null))

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { api } from '../api/client'
+import type { KycProfile } from '../api/client'
 
 const initialForm = {
   full_name: '',
@@ -17,14 +19,22 @@ const initialForm = {
   document_number: '',
 }
 
+type KycFormFields = typeof initialForm
+
+interface KycFiles {
+  document_front: File | null
+  document_back: File | null
+  selfie: File | null
+}
+
 export default function KycForm() {
-  const [form, setForm] = useState(initialForm)
-  const [files, setFiles] = useState({
+  const [form, setForm] = useState<KycFormFields>(initialForm)
+  const [files, setFiles] = useState<KycFiles>({
     document_front: null,
     document_back: null,
     selfie: null,
   })
-  const [existing, setExisting] = useState(null)
+  const [existing, setExisting] = useState<KycProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -57,17 +67,17 @@ export default function KycForm() {
     }
   }, [])
 
-  function handleChange(event) {
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
   }
 
-  function handleFileChange(event) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, files: selected } = event.target
-    setFiles((current) => ({ ...current, [name]: selected[0] || null }))
+    setFiles((current) => ({ ...current, [name]: selected?.[0] ?? null }))
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
     setError('')
@@ -90,7 +100,7 @@ export default function KycForm() {
         payload.append('document_back', files.document_back)
       }
 
-      let profile
+      let profile: KycProfile
       if (isEditing) {
         profile = await api.updateKyc(payload)
         setSuccess('KYC updated successfully. Your profile is pending review.')
@@ -103,7 +113,8 @@ export default function KycForm() {
       setForm(initialForm)
       setFiles({ document_front: null, document_back: null, selfie: null })
     } catch (err) {
-      setError(err.message || 'Failed to submit KYC.')
+      const message = err instanceof Error ? err.message : 'Failed to submit KYC.'
+      setError(message)
     } finally {
       setSubmitting(false)
     }
