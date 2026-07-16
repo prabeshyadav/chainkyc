@@ -1,59 +1,114 @@
 from django.db import transaction
-from django.utils import timezone
-from ninja.errors import HttpError
 
-from kyc.models import KYCStatus, KYCSubmission
-from management.models import User
-from verification.models import VerificationRequest, VerificationStatus
+from kyc.models import KYCStatus, KYCSubmission, KYCDocument, DocumentType
+from .models import Verification
+from django.shortcuts import get_object_or_404
 
 
-class VerificationServiceError(Exception):
-    def __init__(self, message: str, status_code: int = 400):
-        self.message = message
-        self.status_code = status_code
-        super().__init__(message)
+class VerificationService:
+    @staticmethod
+    @transaction.atomic
+    def approve_submission(
+        *,
+        submission,
+        verifier,
+        remarks="",
+    ):
+        if submission.status != KYCStatus.PENDING:
+            raise ValueError(
+                "Only pending KYC submissions can be approved."
+            )
 
+        verification = Verification.objects.create(
+            submission=submission,
+            verifier=verifier,
+            remarks=remarks,
+        )
 
-@transaction.atomic
-def create_verification_request(bank, wallet_address: str, purpose: str) -> VerificationRequest:
-    try:
-        user = User.objects.get(wallet_address=wallet_address.lower())
-    except User.DoesNotExist as exc:
-        raise VerificationServiceError("Wallet user not found.", 404) from exc
+        submission.status = KYCStatus.APPROVED
+        submission.save(update_fields=["status"])
 
-    kyc_submission = (
-        KYCSubmission.objects.filter(user=user, is_current=True)
-        .order_by("-created_at")
-        .first()
-    )
+        return verification
 
-    request_obj = VerificationRequest.objects.create(
-        bank=bank,
-        user=user,
-        kyc_submission=kyc_submission,
-        purpose=purpose.strip(),
-        status=VerificationStatus.PENDING,
-    )
+    @staticmethod
+    @transaction.atomic
+    def reject_submission(
+        *,
+        submission,
+        verifier,
+        remarks="",
+    ):
+        """
+        Reject a pending KYC submission.
+        """
 
-    if kyc_submission and kyc_submission.status == KYCStatus.VERIFIED:
-        request_obj.status = VerificationStatus.APPROVED
-        request_obj.response_note = "User has a verified KYC submission."
-        request_obj.responded_at = timezone.now()
-        request_obj.save()
+        if submission.status != KYCStatus.PENDING:
+            raise ValueError(
+                "Only pending KYC submissions can be rejected."
+            )
 
-    return request_obj
+        verification = Verification.objects.create(
+            submission=submission,
+            verifier=verifier,
+            remarks=remarks,
+        )
 
+        submission.status = KYCStatus.REJECTED
+        submission.save(update_fields=["status"])
 
-def respond_to_request(request_obj: VerificationRequest, status: str, note: str = ""):
-    if request_obj.status != VerificationStatus.PENDING:
-        raise VerificationServiceError("This request has already been processed.", 400)
+        return verification
+    
+    @staticmethod
+    def get_verification_by_submission(submission):
+        """
+        Retrieve the verification record associated with a KYC submission.
+        """
+        return Verification.objects.filter(submission=submission).first()  
+    
+    @staticmethod
+    def list_pending_submissions():
+        """
+        Return all pending KYC submissions awaiting verification.
+        """
 
-    request_obj.status = status
-    request_obj.response_note = note.strip()
-    request_obj.responded_at = timezone.now()
-    request_obj.save()
-    return request_obj
+        return (
+        KYCSubmission.objects
+            .filter(status=KYCStatus.PENDING)
+            .select_related("user")
+            .prefetch_related("documents")
+            .order_by("-created_at")
+        )
+        
+    @staticmethod
+    def get_verification(*, verification_id=None, submission=None):
+        """
+        Get verification details.
 
+        Can retrieve by:
+        - verification id
+        - submission instance
+        """
 
-def handle_service_error(error: VerificationServiceError):
-    raise HttpError(error.status_code, error.message)
+        queryset = (
+            Verification.objects
+            .select_related(
+                "submission",
+                "verifier",
+            )
+        )
+
+        if verification_id:
+            return get_object_or_404(
+                queryset,
+                id=verification_id
+            )
+
+        if submission:
+            return get_object_or_404(
+                queryset,
+                submission=submission
+            )
+
+        raise ValueError(
+            "Either verification_id or submission is required."
+        )

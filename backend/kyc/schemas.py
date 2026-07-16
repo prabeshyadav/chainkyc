@@ -1,138 +1,146 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional
+from enum import Enum
+from typing import List, Optional
 
-from ninja import ModelSchema, Schema
+from ninja import Field, Schema
 
-from .models import DocumentType, KYCStatus, KYCSubmission
+from .models import KYCDocument, KYCSubmission
 
 
-class KYCSubmitSchema(Schema):
+# ============================================================================
+# Enums
+# ============================================================================
+
+class DocumentTypeEnum(str, Enum):
+    CITIZENSHIP = "CITIZENSHIP"
+    DRIVING_LICENSE = "DRIVING_LICENSE"
+    NATIONAL_ID = "NATIONAL_ID"
+    SELFIE = "SELFIE"
+
+
+class KYCStatusEnum(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+# ============================================================================
+# Request Schemas
+# ============================================================================
+
+class KYCSubmissionCreateSchema(Schema):
     full_name: str
     date_of_birth: date
-    gender: str
-    nationality: str
-    phone: str
-    email: Optional[str] = None
     country: str
-    province: str
-    district: str
-    street: str
-    postal_code: str
-    document_type: DocumentType
+    nationality: str
+    document_number: str
+    phone_number: str
+    email: str
+    address: str
+
+
+class KYCDocumentCreateSchema(Schema):
+    """
+    The uploaded file itself is received separately via File(...).
+    This schema only validates the selected document type.
+    """
+    document_type: DocumentTypeEnum
+
+
+# ============================================================================
+# Response Schemas
+# ============================================================================
+
+class KYCDocumentResponseSchema(Schema):
+    id: uuid.UUID
+
+    document_type: DocumentTypeEnum
+    document_type_display: str = Field(
+        ...,
+        alias="get_document_type_display",
+    )
+
+    file: str
+
+    uploaded_at: datetime
+
+    @staticmethod
+    def resolve_file(obj: KYCDocument):
+        return obj.file.url if obj.file else None
+
+    @staticmethod
+    def resolve_document_type_display(obj: KYCDocument):
+        return obj.get_document_type_display()
+
+
+class KYCSubmissionResponseSchema(Schema):
+    id: uuid.UUID
+
+    full_name: str
+    date_of_birth: date
+
+    country: str
+    nationality: str
+
     document_number: str
 
+    phone_number: str
+    email: str
 
-class KYCUpdateSchema(Schema):
+    address: str
+
+    version: int
+
+    status: KYCStatusEnum
+    status_display: str = Field(
+        ...,
+        alias="get_status_display",
+    )
+
+    created_at: datetime
+    updated_at: datetime
+
+    documents: List[KYCDocumentResponseSchema]
+
+    identity_document: Optional[KYCDocumentResponseSchema] = None
+    selfie: Optional[KYCDocumentResponseSchema] = None
+
+    @staticmethod
+    def resolve_status_display(obj: KYCSubmission):
+        return obj.get_status_display()
+
+
+class KYCSubmissionListSchema(Schema):
+    id: uuid.UUID
+
+    full_name: str
+
+    version: int
+
+    status: KYCStatusEnum
+
+    created_at: datetime
+    
+    
+class KYCSubmissionUpdateSchema(Schema):
     full_name: Optional[str] = None
     date_of_birth: Optional[date] = None
-    gender: Optional[str] = None
-    nationality: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
     country: Optional[str] = None
-    province: Optional[str] = None
-    district: Optional[str] = None
-    street: Optional[str] = None
-    postal_code: Optional[str] = None
-    document_type: Optional[DocumentType] = None
+    nationality: Optional[str] = None
     document_number: Optional[str] = None
-    change_reason: Optional[str] = None
-
-
-class KYCStatusOut(Schema):
-    id: uuid.UUID
-    status: KYCStatus
-    document_type: DocumentType
-    rejection_reason: Optional[str] = None
-    submitted_at: Optional[datetime] = None
-    verified_at: Optional[datetime] = None
-    version: int
-    is_current: bool
-
-
-class KYCDetailOut(ModelSchema):
-    class Meta:
-        model = KYCSubmission
-        fields = [
-            "id",
-            "full_name",
-            "date_of_birth",
-            "gender",
-            "nationality",
-            "phone",
-            "email",
-            "country",
-            "province",
-            "district",
-            "street",
-            "postal_code",
-            "document_type",
-            "document_number",
-            "status",
-            "rejection_reason",
-            "submitted_at",
-            "verified_at",
-            "version",
-            "is_current",
-            "ipfs_cid",
-            "data_hash",
-            "tx_hash",
-        ]
-
-
-class KYCReviewOut(Schema):
-    id: uuid.UUID
-    wallet_address: str
-    full_name: str
-    date_of_birth: date
-    gender: str
-    nationality: str
-    phone: str
+    phone_number: Optional[str] = None
     email: Optional[str] = None
-    country: str
-    province: str
-    district: str
-    street: str
-    postal_code: str
-    document_type: DocumentType
-    document_number: str
-    document_front_image: str
-    document_back_image: Optional[str] = None
-    selfie_image: str
-    front_integrity_ok: bool
-    back_integrity_ok: Optional[bool] = None
-    selfie_integrity_ok: bool
-    status: KYCStatus
-    submitted_at: Optional[datetime] = None
+    address: Optional[str] = None
 
 
-class KYCApproveSchema(Schema):
-    note: Optional[str] = None
+# ============================================================================
+# Generic Response Schemas
+# ============================================================================
+
+class MessageSchema(Schema):
+    message: str
 
 
-class KYCRejectSchema(Schema):
-    rejection_reason: str
-
-
-class KYCApprovalResultOut(Schema):
-    id: uuid.UUID
-    status: KYCStatus
-    ipfs_cid: str
-    data_hash: str
-    tx_hash: str
-    verified_at: datetime
-
-
-class KYCRejectionResultOut(Schema):
-    id: uuid.UUID
-    status: KYCStatus
-    rejection_reason: str
-
-
-class KYCPublicVerificationOut(Schema):
-    wallet_address: str
-    status: KYCStatus
-    data_hash: Optional[str] = None
-    tx_hash: Optional[str] = None
-    verified_at: Optional[datetime] = None
+class ErrorSchema(Schema):
+    detail: str
