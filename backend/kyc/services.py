@@ -136,3 +136,10 @@ class KYCService:
             .order_by("-version")
             .first()
         )
+        
+    @staticmethod
+    def get_submission_history(user):
+        return (
+            KYCSubmission.objects.filter(user=user)
+            .order_by("-version")
+        )

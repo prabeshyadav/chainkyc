@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+ADMIN_PRIVATE_KEY = os.getenv(
+    "ADMIN_PRIVATE_KEY"
+)
+
 PINATA_JWT = os.getenv("PINATA_JWT")
 PINATA_API_KEY = os.getenv("PINATA_API_KEY")
 PINATA_SECRET_KEY = os.getenv("PINATA_SECRET_KEY")
@@ -55,6 +59,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "ninja.compatibility.files.fix_request_files_middleware",
 ]
 
 ROOT_URLCONF = "config.urls"

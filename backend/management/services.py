@@ -1,62 +1,74 @@
-from .models import WalletNonce
-
-from django.utils import timezone
-
-from .models import User, WalletNonce
-from .wallet import recover_wallet
-from .auth import (
-    create_access_token,
-    create_refresh_token,
-)
-
-def create_nonce(wallet_address: str) -> WalletNonce:
-    WalletNonce.objects.filter(
-        wallet_address=wallet_address.lower()
-    ).delete()
-
-    return WalletNonce.objects.create(
-        wallet_address=wallet_address.lower(),
-        nonce=WalletNonce.generate_nonce(),
-        expires_at=WalletNonce.expiry_time(),
-    )
-    
-    
-    
-    
+from blockchain.contracts import role_manager
+from blockchain.web3 import w3
+from blockchain.accounts import account, send_transaction
 
 
-def verify_wallet(wallet_address: str, signature: str):
+def execute_role_transaction(function):
 
-    nonce = WalletNonce.objects.filter(
-        wallet_address=wallet_address.lower(),
-        used=False,
-    ).first()
-
-    if nonce is None:
-        raise Exception("Nonce not found")
-
-    if nonce.expires_at < timezone.now():
-        raise Exception("Nonce expired")
-
-    recovered = recover_wallet(
-        signature=signature,
-        nonce=nonce.nonce,
+    gas = function.estimate_gas(
+        {
+            "from": account.address
+        }
     )
 
-    if recovered != wallet_address.lower():
-        raise Exception("Invalid signature")
-
-    nonce.used = True
-    nonce.save()
-
-    user, _ = User.objects.get_or_create(
-        wallet_address=wallet_address.lower()
+    tx = function.build_transaction(
+        {
+            "from": account.address,
+            "nonce": w3.eth.get_transaction_count(
+                account.address
+            ),
+            "gas": gas,
+            "gasPrice": w3.eth.gas_price,
+        }
     )
 
-    from blockchain.services import sync_user_role
-    sync_user_role(user)
+    tx_hash = send_transaction(tx)
+
+    receipt = w3.eth.wait_for_transaction_receipt(
+        tx_hash
+    )
 
     return {
-        "access_token": create_access_token(user),
-        "refresh_token": create_refresh_token(user),
+        "tx_hash": tx_hash.hex(),
+        "status": receipt.status
     }
+
+
+def add_verifier(wallet_address):
+
+    return execute_role_transaction(
+        role_manager.functions.setVerifier(
+            wallet_address,
+            True
+        )
+    )
+
+
+def remove_verifier(wallet_address):
+
+    return execute_role_transaction(
+        role_manager.functions.setVerifier(
+            wallet_address,
+            False
+        )
+    )
+
+
+def add_bank(wallet_address):
+
+    return execute_role_transaction(
+        role_manager.functions.setBank(
+            wallet_address,
+            True
+        )
+    )
+
+
+def remove_bank(wallet_address):
+
+    return execute_role_transaction(
+        role_manager.functions.setBank(
+            wallet_address,
+            False
+        )
+    )

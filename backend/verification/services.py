@@ -1,11 +1,31 @@
 from django.db import transaction
-
-from kyc.models import KYCStatus, KYCSubmission, KYCDocument, DocumentType
-from .models import Verification
 from django.shortcuts import get_object_or_404
+
+from kyc.models import KYCStatus, KYCSubmission
+from .models import Verification
 
 
 class VerificationService:
+    @staticmethod
+    def get_submission(submission_id):
+        """
+        Return a KYC submission by id.
+        """
+        return get_object_or_404(
+            KYCSubmission.objects.select_related("user"),
+            id=submission_id,
+        )
+
+    @staticmethod
+    def ensure_pending(submission):
+        """
+        Ensure the submission is still pending.
+        """
+        if submission.status != KYCStatus.PENDING:
+            raise ValueError(
+                "Only pending KYC submissions can be verified."
+            )
+
     @staticmethod
     @transaction.atomic
     def approve_submission(
@@ -14,10 +34,11 @@ class VerificationService:
         verifier,
         remarks="",
     ):
-        if submission.status != KYCStatus.PENDING:
-            raise ValueError(
-                "Only pending KYC submissions can be approved."
-            )
+        """
+        Approve a pending KYC submission.
+        """
+
+        VerificationService.ensure_pending(submission)
 
         verification = Verification.objects.create(
             submission=submission,
@@ -42,10 +63,7 @@ class VerificationService:
         Reject a pending KYC submission.
         """
 
-        if submission.status != KYCStatus.PENDING:
-            raise ValueError(
-                "Only pending KYC submissions can be rejected."
-            )
+        VerificationService.ensure_pending(submission)
 
         verification = Verification.objects.create(
             submission=submission,
@@ -57,36 +75,33 @@ class VerificationService:
         submission.save(update_fields=["status"])
 
         return verification
-    
-    @staticmethod
-    def get_verification_by_submission(submission):
-        """
-        Retrieve the verification record associated with a KYC submission.
-        """
-        return Verification.objects.filter(submission=submission).first()  
-    
+
     @staticmethod
     def list_pending_submissions():
         """
-        Return all pending KYC submissions awaiting verification.
+        Return all pending KYC submissions.
         """
 
         return (
-        KYCSubmission.objects
+            KYCSubmission.objects
             .filter(status=KYCStatus.PENDING)
             .select_related("user")
             .prefetch_related("documents")
             .order_by("-created_at")
         )
-        
+
     @staticmethod
-    def get_verification(*, verification_id=None, submission=None):
+    def get_verification(
+        *,
+        verification_id=None,
+        submission=None,
+    ):
         """
-        Get verification details.
+        Return verification details.
 
         Can retrieve by:
-        - verification id
-        - submission instance
+        - verification_id
+        - submission
         """
 
         queryset = (
@@ -97,18 +112,26 @@ class VerificationService:
             )
         )
 
-        if verification_id:
+        if verification_id is not None:
             return get_object_or_404(
                 queryset,
-                id=verification_id
+                id=verification_id,
             )
 
-        if submission:
+        if submission is not None:
             return get_object_or_404(
                 queryset,
-                submission=submission
+                submission=submission,
             )
 
         raise ValueError(
-            "Either verification_id or submission is required."
+            "Either verification_id or submission must be provided."
+        )
+        
+    @staticmethod
+    def list_verifications():
+        return (
+            Verification.objects
+            .select_related("submission", "verifier")
+            .order_by("-verified_at")
         )
