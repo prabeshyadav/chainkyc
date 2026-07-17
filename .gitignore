@@ -8,6 +8,8 @@ venv/
 
 # Environment
 .env
+kyc_documents/
+
 
 # Django
 staticfiles/
