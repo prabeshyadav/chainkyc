@@ -2,10 +2,8 @@ from typing import List
 
 from ninja import File, Router
 from ninja.files import UploadedFile
-from requests import request
 
-from management.jwt_auth import JWTAuth
-
+from management.jwt_auth import UserAuth
 
 from .models import KYCSubmission
 from .schemas import (
@@ -18,16 +16,17 @@ from .schemas import (
 )
 from .services import KYCService
 
+
 router = Router(tags=["KYC"])
 
 
 @router.post(
     "/",
+    auth=UserAuth(),
     response={
         201: KYCSubmissionResponseSchema,
         400: MessageSchema,
     },
-    auth=JWTAuth()
 )
 def create_kyc(
     request,
@@ -39,14 +38,8 @@ def create_kyc(
     """
     Create a new KYC submission.
     """
-    
-    print("=" * 50)
-    print("request.user:", request.user)
-    print("request.auth:", request.auth)
-    print("type(request.auth):", type(request.auth))
-    print("=" * 50)
+
     try:
-        
         submission = KYCService.create_submission(
             user=request.auth,
             data=data,
@@ -63,6 +56,7 @@ def create_kyc(
 
 @router.put(
     "/{submission_id}",
+    auth=UserAuth(),
     response={
         200: KYCSubmissionResponseSchema,
         400: MessageSchema,
@@ -81,15 +75,15 @@ def update_kyc(
     Update a pending KYC submission.
     """
 
-    submission = (
-        KYCSubmission.objects.filter(
-            id=submission_id,
-            user=request.user,
-        ).first()
-    )
+    submission = KYCSubmission.objects.filter(
+        id=submission_id,
+        user=request.auth,
+    ).first()
 
     if submission is None:
-        return 404, {"message": "KYC submission not found."}
+        return 404, {
+            "message": "KYC submission not found."
+        }
 
     try:
         submission = KYCService.update_submission(
@@ -108,32 +102,66 @@ def update_kyc(
 
 @router.get(
     "/me",
+    auth=UserAuth(),
     response={
         200: KYCSubmissionResponseSchema,
         404: MessageSchema,
-        
     },
 )
 def my_latest_kyc(request):
     """
-    Return the latest KYC submission for the authenticated user.
+    Return the authenticated user's latest KYC submission.
     """
 
-    submission = KYCService.get_latest_submission(request.user)
+    submission = KYCService.get_latest_submission(
+        request.auth
+    )
 
     if submission is None:
-        return 404, {"message": "No KYC submission found."}
+        return 404, {
+            "message": "No KYC submission found."
+        }
 
     return 200, submission
 
 
 @router.get(
     "/history",
+    auth=UserAuth(),
     response=List[KYCSubmissionListSchema],
 )
 def my_history(request):
     """
-    Return the authenticated user's KYC submission history.
+    Return the authenticated user's KYC history.
     """
 
-    return KYCService.get_submission_history(request.user)
+    return KYCService.get_submission_history(
+        request.auth
+    )
+
+
+@router.get(
+    "/status",
+    auth=UserAuth(),
+)
+def submission_status(request):
+    """
+    Return the latest KYC status.
+    """
+
+    submission = KYCService.get_latest_submission(
+        request.auth
+    )
+
+    if submission is None:
+        return {
+            "submitted": False,
+            "status": "NOT_SUBMITTED",
+        }
+
+    return {
+        "submitted": True,
+        "submission_id": str(submission.id),
+        "status": submission.status,
+        "version": submission.version,
+    }

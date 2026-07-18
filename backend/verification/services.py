@@ -1,5 +1,7 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from verification.models import BlockchainRecord
+
 
 from kyc.models import KYCStatus, KYCSubmission
 from .models import Verification
@@ -133,5 +135,55 @@ class VerificationService:
         return (
             Verification.objects
             .select_related("submission", "verifier")
+            .order_by("-verified_at")
+        )
+        
+    
+    @staticmethod
+    def dashboard():
+
+        return {
+            "pending": KYCSubmission.objects.filter(
+                status=KYCStatus.PENDING
+            ).count(),
+
+            "approved": KYCSubmission.objects.filter(
+                status=KYCStatus.APPROVED
+            ).count(),
+
+            "rejected": KYCSubmission.objects.filter(
+                status=KYCStatus.REJECTED
+            ).count(),
+
+            "uploaded_to_blockchain": BlockchainRecord.objects.count(),
+        }
+        
+    @staticmethod
+    def list_approved_submissions():
+        return (
+            KYCSubmission.objects
+            .filter(status=KYCStatus.APPROVED)
+            .select_related("user")
+            .order_by("-updated_at")
+        )
+    
+    @staticmethod
+    def list_rejected_submissions():
+        return (
+            KYCSubmission.objects
+            .filter(status=KYCStatus.REJECTED)
+            .select_related("user")
+            .order_by("-updated_at")
+        )
+        
+    @staticmethod
+    def list_verifications():
+        return (
+            Verification.objects
+            .select_related(
+                "submission",
+                "verifier",
+                "blockchain_record",
+            )
             .order_by("-verified_at")
         )

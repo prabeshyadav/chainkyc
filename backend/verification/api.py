@@ -3,36 +3,65 @@ from uuid import UUID
 
 from ninja import Router
 
-from kyc.models import KYCSubmission, KYCStatus
-from .models import Verification
+from management.jwt_auth import verifier_auth
+
 from .schemas import (
+    PendingKYCResponseSchema,
     VerificationApproveSchema,
     VerificationRejectSchema,
     VerificationResponseSchema,
-    BlockchainRecordResponseSchema,
     MessageSchema,
 )
 from .services import VerificationService
 
-router = Router(tags=["Verification"])
+
+router = Router(tags=["Verifier"])
 
 
 @router.get(
     "/pending",
-    response=List[VerificationResponseSchema],
+    auth=verifier_auth,
+    response=List[PendingKYCResponseSchema],
 )
 def pending_submissions(request):
     """
-    List all pending KYC submissions.
+    Return all pending KYC submissions.
     """
 
-    return KYCSubmission.objects.filter(
-        status=KYCStatus.PENDING,
-    ).order_by("created_at")
+    return VerificationService.list_pending_submissions()
+
+
+@router.get(
+    "/{submission_id}",
+    auth=verifier_auth,
+    response={
+        200: PendingKYCResponseSchema,
+        404: MessageSchema,
+    },
+)
+def submission_detail(
+    request,
+    submission_id: UUID,
+):
+    """
+    Return a pending KYC submission.
+    """
+
+    submission = VerificationService.get_submission(
+        submission_id
+    )
+
+    if submission is None:
+        return 404, {
+            "message": "Submission not found."
+        }
+
+    return submission
 
 
 @router.post(
     "/{submission_id}/approve",
+    auth=verifier_auth,
     response={
         200: VerificationResponseSchema,
         400: MessageSchema,
@@ -44,28 +73,28 @@ def approve_submission(
     submission_id: UUID,
     payload: VerificationApproveSchema,
 ):
-    submission = KYCSubmission.objects.filter(
-        id=submission_id,
-    ).first()
-
-    if submission is None:
-        return 404, {"message": "Submission not found."}
+    """
+    Approve a KYC submission.
+    """
 
     try:
         verification = VerificationService.approve_submission(
-            submission=submission,
-            verifier=request.user,
+            submission_id=submission_id,
+            verifier=request.auth,
             remarks=payload.remarks,
         )
 
-        return 200, verification
+        return verification
 
     except ValueError as exc:
-        return 400, {"message": str(exc)}
+        return 400, {
+            "message": str(exc)
+        }
 
 
 @router.post(
     "/{submission_id}/reject",
+    auth=verifier_auth,
     response={
         200: VerificationResponseSchema,
         400: MessageSchema,
@@ -77,60 +106,63 @@ def reject_submission(
     submission_id: UUID,
     payload: VerificationRejectSchema,
 ):
-    submission = KYCSubmission.objects.filter(
-        id=submission_id,
-    ).first()
-
-    if submission is None:
-        return 404, {"message": "Submission not found."}
+    """
+    Reject a KYC submission.
+    """
 
     try:
         verification = VerificationService.reject_submission(
-            submission=submission,
-            verifier=request.user,
+            submission_id=submission_id,
+            verifier=request.auth,
             remarks=payload.remarks,
         )
 
-        return 200, verification
+        return verification
 
     except ValueError as exc:
-        return 400, {"message": str(exc)}
+        return 400, {
+            "message": str(exc)
+        }
+        
+
+from .schemas import VerifierDashboardSchema
 
 
 @router.get(
-    "/{submission_id}",
-    response={
-        200: VerificationResponseSchema,
-        404: MessageSchema,
-    },
+    "/dashboard",
+    auth=verifier_auth,
+    response=VerifierDashboardSchema,
 )
-def verification_detail(
-    request,
-    submission_id: UUID,
-):
-    verification = Verification.objects.filter(
-        submission_id=submission_id,
-    ).first()
+def dashboard(request):
+    """
+    Return verifier dashboard statistics.
+    """
 
-    if verification is None:
-        return 404, {"message": "Verification not found."}
+    return VerificationService.dashboard()
 
-    return 200, verification
 
 
 @router.get(
-    "/",
-    response={
-        200: List[VerificationResponseSchema],
-        403: MessageSchema,
-    },
+    "/approved",
+    auth=verifier_auth,
+    response=List[PendingKYCResponseSchema],
 )
-def list_verifications(request):
+def approved_submissions(request):
     """
-    Return all completed verification records.
+    Return all approved KYC submissions.
     """
 
-    if not request.user.is_staff:
-        return 403, {"message": "Permission denied."}
+    return VerificationService.list_approved_submissions()
 
-    return 200, VerificationService.list_verifications()
+
+@router.get(
+    "/rejected",
+    auth=verifier_auth,
+    response=List[PendingKYCResponseSchema],
+)
+def rejected_submissions(request):
+    """
+    Return all rejected KYC submissions.
+    """
+
+    return VerificationService.list_rejected_submissions()

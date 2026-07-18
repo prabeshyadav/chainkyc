@@ -73,3 +73,11 @@ class MessageSchema(Schema):
 
 class ErrorSchema(Schema):
     detail: str
+    
+class VerifierDashboardSchema(Schema):
+    pending: int
+    approved: int
+    rejected: int
+    uploaded_to_blockchain: int
+    
+    
