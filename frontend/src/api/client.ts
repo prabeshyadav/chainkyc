@@ -16,22 +16,43 @@ export interface HealthStatus {
   service: string;
 }
 
-export interface KycProfile {
+export type KycStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface KycDocument {
+  id: string;
+  document_type: string;
+  document_type_display: string;
+  file: string | null;
+  uploaded_at: string;
+}
+
+export interface KycSubmission {
+  id: string;
   full_name: string;
   date_of_birth: string;
-  gender: string;
-  nationality: string;
-  phone: string;
-  email: string | null;
   country: string;
-  province: string;
-  district: string;
-  street: string;
-  postal_code: string;
-  document_type: string;
+  nationality: string;
   document_number: string;
-  status: string;
-  tx_hash?: string | null;
+  phone_number: string;
+  email: string;
+  address: string;
+  version: number;
+  status: KycStatus;
+  status_display: string;
+  created_at: string;
+  updated_at: string;
+  documents: KycDocument[];
+  identity_document: KycDocument | null;
+  selfie: KycDocument | null;
+}
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -55,7 +76,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const message =
       data?.detail || data?.message || `Request failed (${response.status})`;
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
 
   return data as T;
@@ -72,17 +93,17 @@ export const api = {
 
   getMe: () => request<MeResponse>("/me"),
 
-  getMyKyc: () => request<KycProfile>("/kyc/me"),
+  getMyKyc: () => request<KycSubmission>("/kyc/me"),
 
   submitKyc: (formData: FormData) =>
-    request<KycProfile>("/kyc/submit", {
+    request<KycSubmission>("/kyc/", {
       method: "POST",
       body: formData,
     }),
 
-  updateKyc: (formData: FormData) =>
-    request<KycProfile>("/kyc/update", {
-      method: "POST",
+  updateKyc: (submissionId: string, formData: FormData) =>
+    request<KycSubmission>(`/kyc/${submissionId}`, {
+      method: "PUT",
       body: formData,
     }),
 

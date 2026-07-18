@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { UploadCloud, FileText, Check } from "lucide-react";
 import { useAppStore } from "../store/appStore";
 import { Button, Input, TopBar } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
+import { useKycStore } from "../store/kycStore";
 
 const stepLabels = ["Personal details", "Documents", "Review & submit"];
 
@@ -11,7 +12,12 @@ export default function SubmitKyc() {
   const navigate = useNavigate();
   const { submitKyc } = useAppStore();
   const { walletAddress } = useAuthStore();
+  const { kyc, loaded, fetchMyKyc } = useKycStore();
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    fetchMyKyc();
+  }, [fetchMyKyc]);
   const [form, setForm] = useState({
     fullName: "",
     dob: "",
@@ -42,6 +48,21 @@ export default function SubmitKyc() {
     else navigate("/dashboard");
   }
 
+  if (!loaded) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TopBar />
+        <div className="max-w-3xl mx-auto py-20 px-6 text-center text-ink-400">
+          Loading your KYC...
+        </div>
+      </div>
+    );
+  }
+
+  if (kyc && kyc.status !== "REJECTED") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBar />
@@ -49,7 +70,7 @@ export default function SubmitKyc() {
       <div className="max-w-3xl mx-auto py-12 px-6">
         <div className="bg-white border border-line rounded-xl p-8">
           <p className="uppercase text-xs tracking-widest text-ink-400 mb-2 font-mono">
-            Customer &middot; 012345
+            Customer &middot; {walletAddress}
           </p>
           <h1 className="font-display text-2xl font-semibold text-ink-900 mb-1">
             Submit your KYC documents
@@ -215,9 +236,9 @@ export default function SubmitKyc() {
               </div>
               <p className="text-xs text-ink-400">
                 By submitting, wallet{" "}
-                <span className="font-mono">{walletAddress}</span> will be linked to
-                this document hash on-chain. A licensed verifier reviews it
-                off-chain before issuing your KYC token.
+                <span className="font-mono">{walletAddress}</span> will be
+                linked to this document hash on-chain. A licensed verifier
+                reviews it off-chain before issuing your KYC token.
               </p>
             </div>
           )}
