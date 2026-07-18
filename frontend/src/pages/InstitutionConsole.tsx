@@ -1,6 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
 import { TopBar, SectionCard, Button, Badge } from '../components/ui';
+import { useAuthStore } from '../store/authStore';
 
 const sentRequests = [
   { id: 1, address: '0x71C7...8976', date: 'Sent Jul 9, 2026', status: 'Pending' },
@@ -17,22 +16,16 @@ const queryLog = [
 ];
 
 export default function InstitutionConsole() {
-  const navigate = useNavigate();
-  const { wallet, setRole } = useApp();
-
-  function logout() {
-    setRole(null);
-    navigate('/');
-  }
+  const { walletAddress } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar roleLabel="Institution" address={wallet || '0x9F2a...C41b'} onLogout={logout} />
+      <TopBar />
 
       <div className="max-w-3xl mx-auto py-10 px-6 space-y-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="uppercase text-xs tracking-widest text-ink-400 mb-2 font-mono">Institution &middot; {wallet || '0x9F2a...C41b'}</p>
+            <p className="uppercase text-xs tracking-widest text-ink-400 mb-2 font-mono">Institution &middot; {walletAddress}</p>
             <h1 className="font-display text-2xl font-semibold text-ink-900 mb-1">Institution console</h1>
             <p className="text-ink-600">Look up a customer's KYC status and manage your access requests.</p>
           </div>

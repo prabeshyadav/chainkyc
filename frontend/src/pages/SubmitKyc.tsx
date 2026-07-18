@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UploadCloud, FileText, Check } from "lucide-react";
-import { useApp } from "../context/AppContext";
+import { useAppStore } from "../store/appStore";
 import { Button, Input, TopBar } from "../components/ui";
+import { useAuthStore } from "../store/authStore";
 
 const stepLabels = ["Personal details", "Documents", "Review & submit"];
 
 export default function SubmitKyc() {
   const navigate = useNavigate();
-  const { wallet, submitKyc } = useApp();
+  const { submitKyc } = useAppStore();
+  const { walletAddress } = useAuthStore();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     fullName: "",
@@ -37,12 +39,12 @@ export default function SubmitKyc() {
 
   function handleBack() {
     if (step > 1) setStep(step - 1);
-    else navigate("/connect");
+    else navigate("/dashboard");
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar roleLabel="Customer" address="012345" />
+      <TopBar />
 
       <div className="max-w-3xl mx-auto py-12 px-6">
         <div className="bg-white border border-line rounded-xl p-8">
@@ -213,7 +215,7 @@ export default function SubmitKyc() {
               </div>
               <p className="text-xs text-ink-400">
                 By submitting, wallet{" "}
-                <span className="font-mono">{wallet}</span> will be linked to
+                <span className="font-mono">{walletAddress}</span> will be linked to
                 this document hash on-chain. A licensed verifier reviews it
                 off-chain before issuing your KYC token.
               </p>

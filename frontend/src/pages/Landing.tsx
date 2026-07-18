@@ -1,36 +1,9 @@
+import { CheckCircle2, Lock, Share2, Upload, Wallet } from "lucide-react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  User,
-  Building2,
-  ShieldCheck,
-  Upload,
-  Lock,
-  CheckCircle2,
-  Share2,
-} from "lucide-react";
-import { useApp } from "../context/AppContext";
+import { homeForRole } from "../components/RequireRole";
 import { TopBar } from "../components/ui";
-
-const roles = [
-  {
-    id: "customer",
-    icon: User,
-    title: "Customer",
-    desc: "Submit your documents once, control who can access them and see details.",
-  },
-  {
-    id: "institution",
-    icon: Building2,
-    title: "Bank / Institution",
-    desc: "Request verified status on a wallet before onboarding a customer.",
-  },
-  {
-    id: "admin",
-    icon: ShieldCheck,
-    title: "Admin (Regulatory Authority)",
-    desc: "Whitelist institutions, audit on-chain activity, set data-access rules.",
-  },
-];
+import { useAuthStore } from "../store/authStore";
 
 const steps = [
   { icon: Upload, label: "SUBMIT" },
@@ -41,11 +14,24 @@ const steps = [
 
 export default function Landing() {
   const navigate = useNavigate();
-  const { setRole } = useApp();
+  const { connectAndLogin, authenticated, role, initializing, loading, error } =
+    useAuthStore();
 
-  function choose(roleId: string) {
-    setRole(roleId);
-    navigate("/connect");
+  // Already logged in (stored token confirmed against /me) — go straight
+  // to the console for this wallet's role.
+  useEffect(() => {
+    if (!initializing && authenticated) {
+      navigate(homeForRole(role), { replace: true });
+    }
+  }, [initializing, authenticated, role, navigate]);
+
+  async function handleConnect() {
+    try {
+      const session = await connectAndLogin();
+      navigate(homeForRole(session.role));
+    } catch {
+      // error is surfaced via the auth store
+    }
   }
 
   return (
@@ -84,41 +70,31 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Right: role select */}
+        {/* Right: connect wallet */}
         <div className="p-[150px_120px_80px_80px] flex flex-col justify-center">
           <p className="uppercase text-xs tracking-widest text-ink-400 mb-2 font-mono">
             Get started
           </p>
           <h2 className="font-display text-2xl font-semibold text-ink-900 mb-1">
-            Who's signing in?
+            Sign in with your wallet
           </h2>
           <p className="text-ink-600 mb-8">
-            Your role determines what you can see and do on VerifyChain.
+            VerifyChain shows you the right console automatically.
           </p>
 
-          <div className="space-y-3">
-            {roles.map(({ id, icon: Icon, title, desc }) => (
-              <button
-                key={id}
-                onClick={() => choose(id)}
-                className="w-full flex items-center gap-4 text-left border border-line rounded-xl px-4 py-4 hover:border-accent-600 hover:bg-accent-50/40 transition-colors group"
-              >
-                <div className="shrink-0 w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-accent-100 flex items-center justify-center">
-                  <Icon
-                    size={18}
-                    className="text-ink-600 group-hover:text-accent-700"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-ink-900">{title}</p>
-                  <p className="text-sm text-ink-600">{desc}</p>
-                </div>
-                <span className="text-ink-400 group-hover:text-accent-600">
-                  &rarr;
-                </span>
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => handleConnect()}
+            disabled={loading || initializing}
+            className="w-full flex items-center justify-center gap-3 bg-navy-900 text-white rounded-lg px-4 py-3.5 hover:bg-navy-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Wallet size={18} />
+            {initializing
+              ? "Checking session..."
+              : loading
+                ? "Connecting..."
+                : "Connect MetaMask"}
+          </button>
+          {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
 
           <p className="text-xs text-ink-400 mt-6">
             Institutions need admin approval before their wallet can be

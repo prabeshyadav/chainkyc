@@ -1,15 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
 import { TopBar, Button } from '../components/ui';
 
 export default function Confirmation() {
   const navigate = useNavigate();
-  const { wallet } = useApp();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar roleLabel="Customer" address={wallet ?? undefined} />
+      <TopBar />
 
       <div className="max-w-xl mx-auto py-20 px-6">
         <div className="bg-white border border-line rounded-xl p-10 text-center">

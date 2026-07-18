@@ -1,10 +1,11 @@
+import { ShieldCheck } from "lucide-react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
 } from "react";
-import { ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
 
@@ -100,18 +101,29 @@ export function Badge({
   );
 }
 
-export function TopBar({
-  roleLabel,
-  address,
-  onLogout,
-}: {
-  roleLabel?: string;
-  address?: string;
-  onLogout?: () => void;
-}) {
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  VERIFIER: "Verifier",
+  BANK: "Institution",
+  USER: "Customer",
+};
+
+function shortenAddress(address: string | null): string {
+  if (!address) return "";
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+export function TopBar() {
   const navigate = useNavigate();
+  const { walletAddress, role, authenticated, logout } = useAuthStore();
+
+  function handleLogout() {
+    logout();
+    navigate("/");
+  }
+
   return (
-    <header className="flex items-center justify-between px-30 py-4 border-b border-line bg-white">
+    <header className="sticky top-0 z-50 flex items-center justify-between px-30 py-4 border-b border-line bg-white">
       <button
         onClick={() => navigate("/")}
         className="flex items-center gap-2 font-display font-semibold text-ink-900"
@@ -119,17 +131,15 @@ export function TopBar({
         <ShieldCheck size={20} className="text-accent-600" />
         VerifyChain
       </button>
-      {roleLabel && (
+      {authenticated && (
         <div className="flex items-center gap-3">
           <Badge tone="accent">
-            {roleLabel}{" "}
-            {address && <span className="font-mono">{address}</span>}
+            {(role && ROLE_LABELS[role]) || role}{" "}
+            <span className="font-mono">{shortenAddress(walletAddress)}</span>
           </Badge>
-          {onLogout && (
-            <Button variant="primary" onClick={onLogout}>
-              Log Out
-            </Button>
-          )}
+          <Button variant="primary" onClick={handleLogout}>
+            Log Out
+          </Button>
         </div>
       )}
     </header>
