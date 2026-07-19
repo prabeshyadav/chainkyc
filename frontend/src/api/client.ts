@@ -27,6 +27,41 @@ export interface AdminActionResponse {
   transaction: unknown;
 }
 
+export interface VerifierDashboard {
+  pending: number;
+  approved: number;
+  rejected: number;
+  uploaded_to_blockchain: number;
+}
+
+export type SubmissionListStatus = "pending" | "approved" | "rejected";
+
+export interface KycListItem {
+  id: string;
+  full_name: string;
+  version: number;
+  created_at: string;
+}
+
+export interface BlockchainRecord {
+  id: string;
+  ipfs_cid: string;
+  data_hash: string;
+  transaction_hash: string;
+  block_number: number;
+  kyc_version: number;
+  created_at: string;
+}
+
+export interface VerificationResult {
+  id: string;
+  submission_id: string;
+  verifier_wallet: string;
+  remarks: string;
+  verified_at: string;
+  blockchain_record: BlockchainRecord | null;
+}
+
 export type KycStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface KycDocument {
@@ -151,6 +186,27 @@ export const api = {
 
   getMyVerificationRequests: () =>
     request<unknown[]>("/verification/my-requests"),
+
+  getVerifierDashboard: () =>
+    request<VerifierDashboard>("/verification/dashboard"),
+
+  listSubmissions: (status: SubmissionListStatus) =>
+    request<KycListItem[]>(`/verification/${status}`),
+
+  getSubmission: (submissionId: string) =>
+    request<KycListItem>(`/verification/${submissionId}`),
+
+  approveSubmission: (submissionId: string, remarks: string) =>
+    request<VerificationResult>(`/verification/${submissionId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ remarks }),
+    }),
+
+  rejectSubmission: (submissionId: string, remarks: string) =>
+    request<VerificationResult>(`/verification/${submissionId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ remarks }),
+    }),
 
   verifyWalletOnChain: (walletAddress: string) =>
     request<unknown>(`/blockchain/verify/${walletAddress}`),

@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/authStore";
 
 export const ROLE_HOME: Record<string, string> = {
   ADMIN: "/admin",
-  VERIFIER: "/institution",
+  VERIFIER: "/verifier",
   BANK: "/institution",
   USER: "/dashboard",
 };

@@ -8,6 +8,8 @@ import Confirmation from "./pages/Confirmation";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import InstitutionConsole from "./pages/InstitutionConsole";
 import AdminConsole from "./pages/AdminConsole";
+import VerifierConsole from "./pages/VerifierConsole";
+import ReviewSubmission from "./pages/ReviewSubmission";
 
 const App = () => {
   const restoreSession = useAuthStore((s) => s.restoreSession);
@@ -44,9 +46,25 @@ const App = () => {
         }
       />
       <Route
+        path="/verifier"
+        element={
+          <RequireRole roles={["VERIFIER"]}>
+            <VerifierConsole />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/verifier/submissions/:id"
+        element={
+          <RequireRole roles={["VERIFIER"]}>
+            <ReviewSubmission />
+          </RequireRole>
+        }
+      />
+      <Route
         path="/institution"
         element={
-          <RequireRole roles={["BANK", "VERIFIER"]}>
+          <RequireRole roles={["BANK"]}>
             <InstitutionConsole />
           </RequireRole>
         }
