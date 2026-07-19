@@ -16,7 +16,7 @@ api.add_router("/", management_router)
 api.add_router("/user", user_router)
 
 api.add_router("/kyc", kyc_router)
+api.add_router("/verification", verification_router)
 api.add_router("/organizations", organization_router)
 api.add_router("/banks", bank_router)
-api.add_router("/verification", verification_router)
 api.add_router("/blockchain", blockchain_router)

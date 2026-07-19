@@ -25,16 +25,19 @@ def wallet_login(request, payload: WalletLoginSchema):
             "message": "Invalid wallet address"
         }
 
+    # Get current role from blockchain
     role = get_wallet_role(wallet)
 
+    # Create user if it doesn't exist
     user, created = User.objects.get_or_create(
-        wallet_address=wallet.lower(),   # or wallet if you decide to store checksum
+        wallet_address=wallet.lower(),
         defaults={
-            "role": role
-        }
+            "role": role,
+        },
     )
 
-    if not created:
+    # Always keep the database role in sync with blockchain
+    if not created and user.role != role:
         user.role = role
         user.save(update_fields=["role"])
 

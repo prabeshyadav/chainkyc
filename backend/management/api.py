@@ -2,9 +2,7 @@ from ninja import Router
 
 from management.jwt_auth import admin_auth
 from management.schemas import WalletSchema
-from management.permission import is_admin
 from management.jwt_auth import JWTAuth
-from management.role import get_wallet_role
 
 from .services import (
     add_verifier,
@@ -19,6 +17,8 @@ router = Router(
     tags=["Admin"],
     auth=JWTAuth(),
 )
+
+
 @router.get(
     "/me",
     auth=admin_auth,

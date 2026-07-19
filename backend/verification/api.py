@@ -11,11 +11,26 @@ from .schemas import (
     VerificationRejectSchema,
     VerificationResponseSchema,
     MessageSchema,
+    VerifierDashboardSchema
 )
 from .services import VerificationService
 
 
 router = Router(tags=["Verifier"])
+
+@router.get(
+    "/dashboard",
+    auth=verifier_auth,
+    response=VerifierDashboardSchema,
+)
+def dashboard(request):
+    """
+    Return verifier dashboard statistics.
+    """
+
+    return VerificationService.dashboard()
+
+
 
 
 @router.get(
@@ -31,32 +46,6 @@ def pending_submissions(request):
     return VerificationService.list_pending_submissions()
 
 
-@router.get(
-    "/{submission_id}",
-    auth=verifier_auth,
-    response={
-        200: PendingKYCResponseSchema,
-        404: MessageSchema,
-    },
-)
-def submission_detail(
-    request,
-    submission_id: UUID,
-):
-    """
-    Return a pending KYC submission.
-    """
-
-    submission = VerificationService.get_submission(
-        submission_id
-    )
-
-    if submission is None:
-        return 404, {
-            "message": "Submission not found."
-        }
-
-    return submission
 
 
 @router.post(
@@ -128,17 +117,6 @@ def reject_submission(
 from .schemas import VerifierDashboardSchema
 
 
-@router.get(
-    "/dashboard",
-    auth=verifier_auth,
-    response=VerifierDashboardSchema,
-)
-def dashboard(request):
-    """
-    Return verifier dashboard statistics.
-    """
-
-    return VerificationService.dashboard()
 
 
 
@@ -166,3 +144,32 @@ def rejected_submissions(request):
     """
 
     return VerificationService.list_rejected_submissions()
+
+
+
+@router.get(
+    "/{submission_id}",
+    auth=verifier_auth,
+    response={
+        200: PendingKYCResponseSchema,
+        404: MessageSchema,
+    },
+)
+def submission_detail(
+    request,
+    submission_id: UUID,
+):
+    """
+    Return a pending KYC submission.
+    """
+
+    submission = VerificationService.get_submission(
+        submission_id
+    )
+
+    if submission is None:
+        return 404, {
+            "message": "Submission not found."
+        }
+
+    return submission
