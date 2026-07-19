@@ -10,6 +10,12 @@ export interface MeResponse {
   wallet_address: string;
   role: string;
 }
+export interface UserDashboardResponse {
+  has_submission: boolean;
+  submission_id?: string;
+  status: KycStatus | null;
+  version: number | null;
+}
 
 export interface HealthStatus {
   status: string;
@@ -91,7 +97,9 @@ export const api = {
       body: JSON.stringify({ wallet_address: walletAddress }),
     }),
 
-  getMe: () => request<MeResponse>("/me"),
+  getMe: () => request<MeResponse>("/auth/me"),
+
+  getUserDashboard: () => request<UserDashboardResponse>("/user/dashboard"),
 
   getMyKyc: () => request<KycSubmission>("/kyc/me"),
 

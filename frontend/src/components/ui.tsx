@@ -149,19 +149,26 @@ export function TopBar() {
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   hint?: string;
+  error?: string;
 }
 
-export function Input({ label, hint, ...props }: InputProps) {
+export function Input({ label, hint, error, ...props }: InputProps) {
   return (
     <label className="block">
       <span className="block text-sm font-medium text-ink-900 mb-1.5">
         {label}
       </span>
       <input
-        className="w-full rounded-lg border border-line px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-transparent"
+        className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:border-transparent ${
+          error
+            ? "border-red-400 focus:ring-red-500"
+            : "border-line focus:ring-accent-600"
+        }`}
         placeholder={hint}
+        aria-invalid={error ? true : undefined}
         {...props}
       />
+      {error && <span className="block text-xs text-red-600 mt-1">{error}</span>}
     </label>
   );
 }

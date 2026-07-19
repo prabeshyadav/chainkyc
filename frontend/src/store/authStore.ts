@@ -10,7 +10,7 @@ import {
   saveTokens,
   saveWallet,
 } from "../api/client";
-import { useKycStore } from "./kycStore";
+import { queryClient } from "../api/queryClient";
 
 export interface LoginResult {
   walletAddress: string;
@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         params: [{ eth_accounts: {} }],
       })
       .catch(() => {});
-    useKycStore.getState().reset();
+    queryClient.clear();
     set({ walletAddress: null, role: null, authenticated: false, error: "" });
   },
 
