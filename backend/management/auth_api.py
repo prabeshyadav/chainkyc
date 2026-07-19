@@ -2,6 +2,7 @@ from web3 import Web3
 from ninja import Router
 
 from django.contrib.auth import get_user_model
+from management.jwt_auth import jwt_auth
 
 from management.schemas import WalletLoginSchema
 from management.auth import create_access_token
@@ -47,4 +48,18 @@ def wallet_login(request, payload: WalletLoginSchema):
         "access_token": token,
         "role": role,
         "wallet_address": wallet,
+    }
+    
+
+@router.get(
+    "/me",
+    auth=jwt_auth,
+)
+def me(request):
+    user = request.auth
+
+    return {
+        "id": str(user.id),
+        "wallet_address": user.wallet_address,
+        "role": user.role,
     }
