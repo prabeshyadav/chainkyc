@@ -3,6 +3,7 @@ from uuid import UUID
 
 from ninja import Router
 
+from kyc.schemas import KYCSubmissionResponseSchema
 from management.jwt_auth import verifier_auth
 
 from .schemas import (
@@ -67,8 +68,9 @@ def approve_submission(
     """
 
     try:
+        submission = VerificationService.get_submission(submission_id)
         verification = VerificationService.approve_submission(
-            submission_id=submission_id,
+            submission=submission,
             verifier=request.auth,
             remarks=payload.remarks,
         )
@@ -100,8 +102,9 @@ def reject_submission(
     """
 
     try:
+        submission = VerificationService.get_submission(submission_id)
         verification = VerificationService.reject_submission(
-            submission_id=submission_id,
+            submission=submission,
             verifier=request.auth,
             remarks=payload.remarks,
         )
@@ -151,7 +154,7 @@ def rejected_submissions(request):
     "/{submission_id}",
     auth=verifier_auth,
     response={
-        200: PendingKYCResponseSchema,
+        200: KYCSubmissionResponseSchema,
         404: MessageSchema,
     },
 )

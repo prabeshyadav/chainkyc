@@ -1,4 +1,4 @@
-import { TopBar, SectionCard, Button, Badge } from "../components/ui";
+import { TopBar, Badge } from "../components/ui";
 import DashboardStats from "../components/Verifier/DashboardStats";
 import SubmissionsList from "../components/Verifier/SubmissionsList";
 import { useAuthStore } from "../store/authStore";

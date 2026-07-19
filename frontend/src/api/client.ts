@@ -194,7 +194,7 @@ export const api = {
     request<KycListItem[]>(`/verification/${status}`),
 
   getSubmission: (submissionId: string) =>
-    request<KycListItem>(`/verification/${submissionId}`),
+    request<KycSubmission>(`/verification/${submissionId}`),
 
   approveSubmission: (submissionId: string, remarks: string) =>
     request<VerificationResult>(`/verification/${submissionId}/approve`, {
