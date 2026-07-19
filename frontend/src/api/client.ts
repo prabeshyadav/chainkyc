@@ -22,6 +22,11 @@ export interface HealthStatus {
   service: string;
 }
 
+export interface AdminActionResponse {
+  message: string;
+  transaction: unknown;
+}
+
 export type KycStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface KycDocument {
@@ -113,6 +118,18 @@ export const api = {
     request<KycSubmission>(`/kyc/${submissionId}`, {
       method: "PUT",
       body: formData,
+    }),
+
+  addVerifier: (walletAddress: string) =>
+    request<AdminActionResponse>("/verifier/add", {
+      method: "POST",
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    }),
+
+  removeVerifier: (walletAddress: string) =>
+    request<AdminActionResponse>("/verifier/remove", {
+      method: "POST",
+      body: JSON.stringify({ wallet_address: walletAddress }),
     }),
 
   listBanks: () => request<unknown[]>("/banks/"),
