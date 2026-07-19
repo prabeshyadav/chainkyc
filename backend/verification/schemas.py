@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
+from datetime import date
 
 from ninja import Field, Schema
 
@@ -11,6 +12,34 @@ from .models import BlockchainRecord, Verification
 # Request Schemas
 # ---------------------------------------------------------------------------
 
+
+class KYCDetailSchema(Schema):
+    id: uuid.UUID
+
+    wallet_address: str = Field(
+        ...,
+        alias="user.wallet_address",
+    )
+
+    full_name: str
+    date_of_birth: date
+    nationality: str
+    document_type: str
+    document_number: str
+    address: str
+
+    selfie: str
+    identity_document: str
+
+    status: str
+    version: int
+
+    created_at: datetime
+    updated_at: datetime
+
+    @staticmethod
+    def resolve_wallet_address(obj):
+        return obj.user.wallet_address
 class VerificationApproveSchema(Schema):
     """
     Payload used when a verifier approves a KYC submission.
