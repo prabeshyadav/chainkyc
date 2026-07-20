@@ -18,6 +18,7 @@ PINATA_JWT = os.getenv("PINATA_JWT")
 PINATA_API_KEY = os.getenv("PINATA_API_KEY")
 PINATA_SECRET_KEY = os.getenv("PINATA_SECRET_KEY")
 PINATA_GATEWAY = os.getenv("PINATA_GATEWAY")
+KYC_ENCRYPTION_KEY = os.getenv("KYC_ENCRYPTION_KEY")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

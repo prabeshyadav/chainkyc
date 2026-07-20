@@ -69,8 +69,12 @@ class KYCSubmission(models.Model):
 
     @property
     def identity_document(self):
-        return self.documents.exclude(
-            document_type=DocumentType.SELFIE
+        return self.documents.filter(
+            document_type__in=[
+                DocumentType.CITIZENSHIP,
+                DocumentType.DRIVING_LICENSE,
+                DocumentType.NATIONAL_ID,
+            ]
         ).first()
         
     @property

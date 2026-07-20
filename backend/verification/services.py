@@ -42,6 +42,11 @@ class VerificationService:
 
         VerificationService.ensure_pending(submission)
 
+        if Verification.objects.filter(submission=submission).exists():
+            raise ValueError(
+                "This submission has already been verified."
+            )
+
         verification = Verification.objects.create(
             submission=submission,
             verifier=verifier,
@@ -66,6 +71,11 @@ class VerificationService:
         """
 
         VerificationService.ensure_pending(submission)
+
+        if Verification.objects.filter(submission=submission).exists():
+            raise ValueError(
+                "This submission has already been verified."
+            )
 
         verification = Verification.objects.create(
             submission=submission,

@@ -1,19 +1,17 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
-from datetime import date
 
 from ninja import Field, Schema
 
-from .models import BlockchainRecord, Verification
+from .models import Verification
 
 
 # ---------------------------------------------------------------------------
-# Request Schemas
+# KYC Detail (Verifier)
 # ---------------------------------------------------------------------------
 
-
-class KYCDetailSchema(Schema):
+class VerifierKYCDetailSchema(Schema):
     id: uuid.UUID
 
     wallet_address: str = Field(
@@ -23,13 +21,30 @@ class KYCDetailSchema(Schema):
 
     full_name: str
     date_of_birth: date
+
+    country: str
     nationality: str
-    document_type: str
-    document_number: str
+
+    phone_number: str
+    email: str
     address: str
 
-    selfie: str
-    identity_document: str
+    document_number: str
+
+    document_type: str = Field(
+        ...,
+        alias="identity_document.document_type",
+    )
+
+    selfie: str = Field(
+        ...,
+        alias="selfie.file.url",
+    )
+
+    identity_document: str = Field(
+        ...,
+        alias="identity_document.file.url",
+    )
 
     status: str
     version: int
@@ -40,23 +55,22 @@ class KYCDetailSchema(Schema):
     @staticmethod
     def resolve_wallet_address(obj):
         return obj.user.wallet_address
+
+
+# ---------------------------------------------------------------------------
+# Request Schemas
+# ---------------------------------------------------------------------------
+
 class VerificationApproveSchema(Schema):
-    """
-    Payload used when a verifier approves a KYC submission.
-    """
     remarks: str = ""
 
 
 class VerificationRejectSchema(Schema):
-    """
-    Payload used when a verifier rejects a KYC submission.
-    Rejection reason should always be provided.
-    """
     remarks: str
 
 
 # ---------------------------------------------------------------------------
-# Response Schemas
+# Blockchain
 # ---------------------------------------------------------------------------
 
 class BlockchainRecordResponseSchema(Schema):
@@ -69,25 +83,41 @@ class BlockchainRecordResponseSchema(Schema):
     created_at: datetime
 
 
+# ---------------------------------------------------------------------------
+# Verification Response
+# ---------------------------------------------------------------------------
+
 class VerificationResponseSchema(Schema):
     id: uuid.UUID
 
-    submission_id: uuid.UUID
+    submission_id: uuid.UUID = Field(
+        ...,
+        alias="submission.id",
+    )
 
     verifier_wallet: str = Field(
         ...,
         alias="verifier.wallet_address",
     )
 
-    remarks: str
+    remarks: Optional[str] = None
+
     verified_at: datetime
 
     blockchain_record: Optional[BlockchainRecordResponseSchema] = None
 
     @staticmethod
+    def resolve_submission_id(obj: Verification):
+        return obj.submission.id
+
+    @staticmethod
     def resolve_verifier_wallet(obj: Verification):
         return obj.verifier.wallet_address
 
+
+# ---------------------------------------------------------------------------
+# Pending List
+# ---------------------------------------------------------------------------
 
 class PendingKYCResponseSchema(Schema):
     id: uuid.UUID
@@ -96,17 +126,24 @@ class PendingKYCResponseSchema(Schema):
     created_at: datetime
 
 
+# ---------------------------------------------------------------------------
+# Generic Schemas
+# ---------------------------------------------------------------------------
+
 class MessageSchema(Schema):
     message: str
 
 
 class ErrorSchema(Schema):
     detail: str
-    
+
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+
 class VerifierDashboardSchema(Schema):
     pending: int
     approved: int
     rejected: int
     uploaded_to_blockchain: int
-    
-    
