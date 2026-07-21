@@ -10,6 +10,10 @@ from dotenv import dotenv_values
 from eth_account import Account
 from web3 import Web3
 
+from blockchain.contracts import kyc_registry
+from blockchain.accounts import account, send_transaction
+from blockchain.web3 import w3
+
 from blockchain.models import AnchorStatus, BlockchainAnchor, BlockchainNetwork
 from kyc.models import KYCSubmission
 
@@ -261,3 +265,53 @@ def sync_user_role(user) -> str:
 
     return user.role
 
+
+
+
+
+def anchor_kyc(
+    user_wallet: str,
+    ipfs_cid: str,
+    data_hash: str,
+):
+    """
+    Anchor a verified KYC record to the blockchain.
+    """
+
+    wallet = Web3.to_checksum_address(user_wallet)
+
+    data_hash_bytes = Web3.to_bytes(hexstr=data_hash)
+
+    function = kyc_registry.functions.anchorKYC(
+        wallet,
+        ipfs_cid,
+        data_hash_bytes,
+    )
+
+    gas = function.estimate_gas(
+        {
+            "from": account.address,
+        }
+    )
+
+    tx = function.build_transaction(
+        {
+            "from": account.address,
+            "nonce": w3.eth.get_transaction_count(
+                account.address
+            ),
+            "gas": gas,
+            "gasPrice": w3.eth.gas_price,
+        }
+    )
+
+    tx_hash = send_transaction(tx)
+
+    receipt = w3.eth.wait_for_transaction_receipt(
+        tx_hash
+    )
+
+    return {
+        "transaction_hash": tx_hash.hex(),
+        "block_number": receipt.blockNumber,
+    }

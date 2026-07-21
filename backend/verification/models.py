@@ -64,9 +64,14 @@ class BlockchainRecord(models.Model):
     transaction_hash = models.CharField(
         max_length=66,
         unique=True,
+        null=True,
+        blank=True,
     )
 
-    block_number = models.BigIntegerField()
+    block_number = models.BigIntegerField(
+        null=True,
+        blank=True,
+    )
 
     kyc_version = models.PositiveIntegerField()
 

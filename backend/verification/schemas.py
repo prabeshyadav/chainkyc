@@ -51,10 +51,17 @@ class VerifierKYCDetailSchema(Schema):
 
     created_at: datetime
     updated_at: datetime
+    verification_id: Optional[uuid.UUID] = None
 
     @staticmethod
     def resolve_wallet_address(obj):
         return obj.user.wallet_address
+    
+    @staticmethod
+    def resolve_verification_id(obj):
+        if hasattr(obj, "verification"):
+            return obj.verification.id
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +127,22 @@ class VerificationResponseSchema(Schema):
 # ---------------------------------------------------------------------------
 
 class PendingKYCResponseSchema(Schema):
-    id: uuid.UUID
+    submission_id: uuid.UUID
+    verification_id: Optional[uuid.UUID] = None
+
     full_name: str
     version: int
     created_at: datetime
+
+    @staticmethod
+    def resolve_submission_id(obj):
+        return obj.id
+
+    @staticmethod
+    def resolve_verification_id(obj):
+        if hasattr(obj, "verification"):
+            return obj.verification.id
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -147,3 +166,28 @@ class VerifierDashboardSchema(Schema):
     approved: int
     rejected: int
     uploaded_to_blockchain: int
+    
+    
+
+class PrepareBlockchainResponseSchema(Schema):
+    verification_id: uuid.UUID
+    user_wallet: str
+    ipfs_cid: str
+    data_hash: str
+    kyc_version: int
+    
+
+class BlockchainCompleteSchema(Schema):
+    transaction_hash: str
+    block_number: int
+    
+class BlockchainCompleteResponseSchema(Schema):
+    verification_id: uuid.UUID
+
+    transaction_hash: str
+    block_number: int
+
+    ipfs_cid: str
+    data_hash: str
+
+    kyc_version: int

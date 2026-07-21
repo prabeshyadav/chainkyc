@@ -4,23 +4,44 @@ pragma solidity ^0.8.20;
 import "./RoleManager.sol";
 
 /// @title KYCRegistry
-/// @notice Anchors versioned, off-chain-verified KYC records (IPFS CID + data hash) on-chain.
-/// @dev Permissions are delegated to an external RoleManager contract. Only addresses marked
-///      as VERIFIER in RoleManager may anchor new KYC records.
+/// @notice Stores verified KYC proofs (IPFS CID + data hash) on-chain.
+/// @dev RoleManager controls system roles:
+///      - Verifiers can anchor KYC
+///      - Banks can receive access from users
+///
+///      Users control which banks can read their KYC records.
 contract KYCRegistry {
 
     struct KYCRecord {
+
         uint256 version;
+
         string ipfsCid;
+
         bytes32 dataHash;
+
         uint256 verifiedAt;
+
         address verifiedBy;
     }
 
+
     RoleManager public roleManager;
 
-    // user => list of verified KYC versions
+
+    // user => list of KYC versions
     mapping(address => KYCRecord[]) private kycHistory;
+
+
+    // user => bank => permission
+    mapping(address => mapping(address => bool))
+        private accessPermissions;
+
+
+
+    // -------------------------------------------------------------------
+    // Events
+    // -------------------------------------------------------------------
 
     event KYCVerified(
         address indexed user,
@@ -31,21 +52,72 @@ contract KYCRegistry {
         uint256 verifiedAt
     );
 
+
+    event AccessGranted(
+        address indexed user,
+        address indexed bank
+    );
+
+
+    event AccessRevoked(
+        address indexed user,
+        address indexed bank
+    );
+
+
+
+    // -------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------
+
     constructor(address roleManagerAddress) {
-        require(roleManagerAddress != address(0), "Zero address");
-        roleManager = RoleManager(roleManagerAddress);
+
+        require(
+            roleManagerAddress != address(0),
+            "Zero address"
+        );
+
+        roleManager = RoleManager(
+            roleManagerAddress
+        );
     }
 
+
+
+    // -------------------------------------------------------------------
+    // Modifiers
+    // -------------------------------------------------------------------
+
     modifier onlyVerifier() {
+
         require(
             roleManager.isVerifier(msg.sender),
             "Not an authorized verifier"
         );
+
         _;
     }
 
+
+
+    modifier onlyUserOrAuthorizedBank(
+        address user
+    ) {
+
+        require(
+            msg.sender == user ||
+            accessPermissions[user][msg.sender],
+            "No access permission"
+        );
+
+        _;
+    }
+
+
+
+
     // -------------------------------------------------------------------
-    // Store a newly verified KYC
+    // Anchor KYC
     // -------------------------------------------------------------------
 
     function anchorKYC(
@@ -56,21 +128,46 @@ contract KYCRegistry {
         external
         onlyVerifier
     {
-        require(user != address(0), "Zero address user");
-        require(bytes(ipfsCid).length > 0, "Empty IPFS CID");
-        require(dataHash != bytes32(0), "Empty data hash");
 
-        uint256 version = kycHistory[user].length + 1;
+        require(
+            user != address(0),
+            "Zero address user"
+        );
+
+
+        require(
+            bytes(ipfsCid).length > 0,
+            "Empty IPFS CID"
+        );
+
+
+        require(
+            dataHash != bytes32(0),
+            "Empty data hash"
+        );
+
+
+        uint256 version =
+            kycHistory[user].length + 1;
+
+
 
         kycHistory[user].push(
             KYCRecord({
+
                 version: version,
+
                 ipfsCid: ipfsCid,
+
                 dataHash: dataHash,
+
                 verifiedAt: block.timestamp,
+
                 verifiedBy: msg.sender
             })
         );
+
+
 
         emit KYCVerified(
             user,
@@ -82,14 +179,98 @@ contract KYCRegistry {
         );
     }
 
+
+
+
     // -------------------------------------------------------------------
-    // Returns latest verified KYC
+    // User grants bank access
     // -------------------------------------------------------------------
 
-    function getLatestKYC(address user)
+    function grantAccess(
+        address bank
+    )
+        external
+    {
+
+        require(
+            bank != address(0),
+            "Zero address bank"
+        );
+
+
+        require(
+            roleManager.isBank(bank),
+            "Not an authorized bank"
+        );
+
+
+        accessPermissions[msg.sender][bank] = true;
+
+
+
+        emit AccessGranted(
+            msg.sender,
+            bank
+        );
+    }
+
+
+
+
+    // -------------------------------------------------------------------
+    // User revokes bank access
+    // -------------------------------------------------------------------
+
+    function revokeAccess(
+        address bank
+    )
+        external
+    {
+
+        accessPermissions[msg.sender][bank] = false;
+
+
+
+        emit AccessRevoked(
+            msg.sender,
+            bank
+        );
+    }
+
+
+
+
+    // -------------------------------------------------------------------
+    // Check bank permission
+    // -------------------------------------------------------------------
+
+    function hasAccess(
+        address user,
+        address bank
+    )
         external
         view
-        returns (
+        returns(bool)
+    {
+
+        return accessPermissions[user][bank];
+    }
+
+
+
+
+
+    // -------------------------------------------------------------------
+    // Latest KYC
+    // -------------------------------------------------------------------
+
+    function getLatestKYC(
+        address user
+    )
+        external
+        view
+        onlyUserOrAuthorizedBank(user)
+        returns(
             uint256 version,
             string memory ipfsCid,
             bytes32 dataHash,
@@ -97,15 +278,21 @@ contract KYCRegistry {
             address verifiedBy
         )
     {
+
         require(
             kycHistory[user].length > 0,
             "No verified KYC"
         );
 
-        KYCRecord memory record =
-            kycHistory[user][kycHistory[user].length - 1];
 
-        return (
+        KYCRecord memory record =
+            kycHistory[user][
+                kycHistory[user].length - 1
+            ];
+
+
+
+        return(
             record.version,
             record.ipfsCid,
             record.dataHash,
@@ -114,8 +301,11 @@ contract KYCRegistry {
         );
     }
 
+
+
+
     // -------------------------------------------------------------------
-    // Returns a specific version
+    // Specific KYC version
     // -------------------------------------------------------------------
 
     function getKYCVersion(
@@ -124,23 +314,28 @@ contract KYCRegistry {
     )
         external
         view
-        returns (
+        onlyUserOrAuthorizedBank(user)
+        returns(
             string memory ipfsCid,
             bytes32 dataHash,
             uint256 verifiedAt,
             address verifiedBy
         )
     {
+
         require(
             version > 0 &&
             version <= kycHistory[user].length,
             "Invalid version"
         );
 
+
         KYCRecord memory record =
             kycHistory[user][version - 1];
 
-        return (
+
+
+        return(
             record.ipfsCid,
             record.dataHash,
             record.verifiedAt,
@@ -148,27 +343,40 @@ contract KYCRegistry {
         );
     }
 
+
+
+
+
     // -------------------------------------------------------------------
-    // Total verified versions
+    // Version count
     // -------------------------------------------------------------------
 
-    function getVersionCount(address user)
+    function getVersionCount(
+        address user
+    )
         external
         view
-        returns (uint256)
+        returns(uint256)
     {
+
         return kycHistory[user].length;
     }
 
+
+
+
     // -------------------------------------------------------------------
-    // Does this user have verified KYC?
+    // Check verified KYC existence
     // -------------------------------------------------------------------
 
-    function hasVerifiedKYC(address user)
+    function hasVerifiedKYC(
+        address user
+    )
         external
         view
-        returns (bool)
+        returns(bool)
     {
+
         return kycHistory[user].length > 0;
     }
 }

@@ -13,6 +13,9 @@ from .schemas import (
     VerificationResponseSchema,
     MessageSchema,
     VerifierDashboardSchema,
+    PrepareBlockchainResponseSchema,
+    BlockchainCompleteSchema,
+    BlockchainCompleteResponseSchema,
 )
 from .services import VerificationService
 
@@ -144,6 +147,79 @@ def reject_submission(
         )
 
         return verification
+
+    except ValueError as exc:
+        return 400, {
+            "message": str(exc),
+        }
+        
+        
+        
+@router.post(
+    "/{verification_id}/prepare",
+    auth=verifier_auth,
+    response={
+        200: PrepareBlockchainResponseSchema,
+        400: MessageSchema,
+        404: MessageSchema,
+    },
+)
+def prepare_blockchain(
+    request,
+    verification_id: UUID,
+):
+    """
+    Prepare an approved KYC for blockchain anchoring.
+
+    Builds the package, encrypts it, uploads it to IPFS,
+    and returns the CID and SHA-256 hash.
+    """
+
+    try:
+        verification = VerificationService.get_verification(
+            verification_id=verification_id,
+        )
+
+        return VerificationService.prepare_for_blockchain(
+            verification,
+        )
+
+    except ValueError as exc:
+        return 400, {
+            "message": str(exc),
+        }
+        
+        
+        
+@router.post(
+    "/{verification_id}/complete",
+    auth=verifier_auth,
+    response={
+        200: BlockchainCompleteResponseSchema,
+        400: MessageSchema,
+        404: MessageSchema,
+    },
+)
+def complete_blockchain(
+    request,
+    verification_id: UUID,
+    payload: BlockchainCompleteSchema,
+):
+    """
+    Save blockchain transaction details after the verifier
+    successfully anchors the KYC on-chain.
+    """
+
+    try:
+        verification = VerificationService.get_verification(
+            verification_id=verification_id,
+        )
+
+        return VerificationService.complete_blockchain(
+            verification=verification,
+            transaction_hash=payload.transaction_hash,
+            block_number=payload.block_number,
+        )
 
     except ValueError as exc:
         return 400, {

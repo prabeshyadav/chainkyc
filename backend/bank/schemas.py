@@ -32,3 +32,16 @@ class BankOut(Schema):
     organization: OrganizationOut
     created_at: datetime
 
+
+
+
+
+class BankKYCResponseSchema(Schema):
+
+    user_wallet: str
+
+    ipfs_cid: str
+
+    data_hash: str
+
+    timestamp: int
