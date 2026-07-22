@@ -7,3 +7,8 @@ class WalletSchema(Schema):
 
 class WalletLoginSchema(Schema):
     wallet_address: str
+    
+class MessageSchema(Schema):
+    message: str
+    tx_hash: str
+    status: int

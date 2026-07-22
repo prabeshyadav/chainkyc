@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional,Dict, Any
 
 from ninja import Schema
 
@@ -37,11 +37,27 @@ class BankOut(Schema):
 
 
 class BankKYCResponseSchema(Schema):
-
     user_wallet: str
-
     ipfs_cid: str
-
     data_hash: str
+    verified_at: int
+    kyc_data: Dict[str, Any]
+    
+    
+class BankAccessSchema(Schema):
+    bank_wallet: str
 
-    timestamp: int
+
+class AccessResponseSchema(Schema):
+    transaction_hash: str
+    status: int
+
+
+class AccessStatusSchema(Schema):
+    has_access: bool
+    
+
+
+class BankDecryptedKYCResponseSchema(Schema):
+    user_wallet: str
+    kyc: dict

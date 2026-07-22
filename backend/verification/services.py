@@ -7,6 +7,9 @@ from verification.package import KYCPackageBuilder
 from verification.encryption import KYCEncryption
 from verification.hashing import KYCHasher
 from storage.ipfs import IPFSStorage
+from blockchain.contracts import kyc_registry
+from blockchain.web3 import w3
+
 
 
 from kyc.models import KYCStatus, KYCSubmission
@@ -302,10 +305,6 @@ class VerificationService:
         transaction_hash,
         block_number,
     ):
-        """
-        Save blockchain transaction details after
-        MetaMask successfully anchors the KYC.
-        """
 
         try:
             record = verification.blockchain_record
@@ -319,8 +318,71 @@ class VerificationService:
                 "This verification is already anchored."
             )
 
+
+        # 1. Check transaction exists
+        try:
+            receipt = w3.eth.get_transaction_receipt(
+                transaction_hash
+            )
+        except Exception:
+            raise ValueError(
+                "Transaction not found."
+            )
+
+
+        # 2. Check transaction succeeded
+        if receipt.status != 1:
+            raise ValueError(
+                "Blockchain transaction failed."
+            )
+
+
+        # 3. Check transaction was sent to KYCRegistry
+        if (
+            receipt.to.lower()
+            != kyc_registry.address.lower()
+        ):
+            raise ValueError(
+                "Invalid blockchain contract."
+            )
+
+
+        # 4. Check KYCAnchored event
+        events = (
+            kyc_registry.events.KYCAnchored()
+            .process_receipt(receipt)
+        )
+
+        if not events:
+            raise ValueError(
+                "KYC was not anchored."
+            )
+
+
+        event = events[0]["args"]
+
+
+        # 5. Verify CID
+        if event["ipfsCid"] != record.ipfs_cid:
+            raise ValueError(
+                "IPFS CID mismatch."
+            )
+
+
+        # 6. Verify hash
+        event_hash = w3.to_hex(
+            event["dataHash"]
+        )
+
+        if event_hash != record.data_hash:
+            raise ValueError(
+                "Data hash mismatch."
+            )
+
+
+        # 7. Save verified transaction
         record.transaction_hash = transaction_hash
-        record.block_number = block_number
+        record.block_number = receipt.blockNumber
 
         record.save(
             update_fields=[
@@ -328,6 +390,7 @@ class VerificationService:
                 "block_number",
             ]
         )
+
 
         return {
             "verification_id": verification.id,

@@ -4,7 +4,6 @@ from blockchain.accounts import account, send_transaction
 
 
 def execute_role_transaction(function):
-
     gas = function.estimate_gas(
         {
             "from": account.address
@@ -30,45 +29,73 @@ def execute_role_transaction(function):
 
     return {
         "tx_hash": tx_hash.hex(),
-        "status": receipt.status
+        "status": receipt.status,
     }
 
 
-def add_verifier(wallet_address):
+# --------------------------------------------------
+# Verifiers
+# --------------------------------------------------
 
+def add_verifier(wallet_address):
     return execute_role_transaction(
         role_manager.functions.setVerifier(
             wallet_address,
-            True
+            True,
         )
     )
 
 
 def remove_verifier(wallet_address):
-
     return execute_role_transaction(
         role_manager.functions.setVerifier(
             wallet_address,
-            False
+            False,
         )
     )
 
 
-def add_bank(wallet_address):
+def list_verifiers():
+    return role_manager.functions.getAllVerifiers().call()
 
+
+def verifier_count():
+    return role_manager.functions.getVerifierCount().call()
+
+
+def verifier_at(index):
+    return role_manager.functions.getVerifierAt(index).call()
+
+
+# --------------------------------------------------
+# Banks
+# --------------------------------------------------
+
+def add_bank(wallet_address):
     return execute_role_transaction(
         role_manager.functions.setBank(
             wallet_address,
-            True
+            True,
         )
     )
 
 
 def remove_bank(wallet_address):
-
     return execute_role_transaction(
         role_manager.functions.setBank(
             wallet_address,
-            False
+            False,
         )
     )
+
+
+def list_banks():
+    return role_manager.functions.getAllBanks().call()
+
+
+def bank_count():
+    return role_manager.functions.getBankCount().call()
+
+
+def bank_at(index):
+    return role_manager.functions.getBankAt(index).call()
