@@ -1,7 +1,6 @@
 from ninja import Router
 
-from management.jwt_auth import bank_auth
-from management.jwt_auth import user_auth
+from management.jwt_auth import bank_auth, user_auth
 
 from .service import BankService
 from .schemas import (
@@ -11,24 +10,29 @@ from .schemas import (
     AccessResponseSchema,
     AccessStatusSchema,
 )
-router = Router(
-    tags=["Bank"]
-)
 
+router = Router(tags=["Bank"])
+
+
+# --------------------------------------------------------
+# Bank Info
+# --------------------------------------------------------
 
 @router.get(
     "/me",
     auth=bank_auth,
 )
 def me(request):
-
     return {
         "wallet_address": request.auth.wallet_address,
         "role": request.auth.role,
     }
-    
-    
-    
+
+
+# --------------------------------------------------------
+# View User KYC Metadata
+# --------------------------------------------------------
+
 @router.get(
     "/kyc/{wallet_address}",
     auth=bank_auth,
@@ -38,25 +42,9 @@ def get_user_kyc(
     request,
     wallet_address: str,
 ):
-
     return BankService.check_kyc(
         wallet_address,
         request.auth.wallet_address,
-    )
-    
-    
-
-@router.get(
-    "/kyc/{wallet_address}",
-    auth=bank_auth,
-    response=BankKYCResponseSchema,
-)
-def get_user_kyc(
-    request,
-    wallet_address: str,
-):
-    return BankService.check_kyc(
-        wallet_address
     )
 
 
@@ -77,7 +65,7 @@ def grant_access(
     Grant a bank permission to access the user's KYC.
     """
     return BankService.grant_access(
-        payload.bank_wallet
+        payload.bank_wallet,
     )
 
 
@@ -94,7 +82,7 @@ def revoke_access(
     Revoke a bank's permission to access the user's KYC.
     """
     return BankService.revoke_access(
-        payload.bank_wallet
+        payload.bank_wallet,
     )
 
 
@@ -108,14 +96,19 @@ def access_status(
     bank_wallet: str,
 ):
     """
-    Check whether the specified bank currently has
-    permission to access the user's KYC.
+    Check whether the specified bank currently has permission
+    to access the user's KYC.
     """
     return BankService.has_access(
         request.auth.wallet_address,
         bank_wallet,
     )
-    
+
+
+# --------------------------------------------------------
+# Decrypt User KYC
+# --------------------------------------------------------
+
 @router.get(
     "/kyc/{user_wallet}/decrypt",
     auth=bank_auth,
@@ -125,7 +118,6 @@ def decrypt_kyc(
     request,
     user_wallet: str,
 ):
-
     return BankService.get_decrypted_kyc(
         user_wallet=user_wallet,
         bank_wallet=request.auth.wallet_address,
