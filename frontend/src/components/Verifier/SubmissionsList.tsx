@@ -14,7 +14,6 @@ export default function SubmissionsList() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<SubmissionListStatus>("pending");
   const { data: submissions, isPending, isError, error } = useSubmissions(tab);
-
   return (
     <SectionCard
       title="KYC applications"
@@ -46,7 +45,7 @@ export default function SubmissionsList() {
         <div className="space-y-3">
           {submissions.map((s) => (
             <div
-              key={s.id}
+              key={s.submission_id}
               className="flex items-center gap-3 border border-line rounded-lg px-4 py-3"
             >
               <div className="flex-1 min-w-0">
@@ -60,7 +59,9 @@ export default function SubmissionsList() {
               <Badge>v{s.version}</Badge>
               <Button
                 variant="secondary"
-                onClick={() => navigate(`/verifier/submissions/${s.id}`)}
+                onClick={() =>
+                  navigate(`/verifier/submissions/${s.submission_id}`)
+                }
               >
                 Review
               </Button>

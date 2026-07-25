@@ -85,7 +85,7 @@ export default function Landing() {
           <button
             onClick={() => handleConnect()}
             disabled={loading || initializing}
-            className="w-full flex items-center justify-center gap-3 bg-navy-900 text-white rounded-lg px-4 py-3.5 hover:bg-navy-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-60 flex items-center justify-center gap-3 bg-navy-900 text-white rounded-lg px-4 py-3.5 hover:bg-navy-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Wallet size={18} />
             {initializing

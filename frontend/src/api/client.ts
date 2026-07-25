@@ -37,7 +37,7 @@ export interface VerifierDashboard {
 export type SubmissionListStatus = "pending" | "approved" | "rejected";
 
 export interface KycListItem {
-  id: string;
+  submission_id: string;
   full_name: string;
   version: number;
   created_at: string;
@@ -60,6 +60,23 @@ export interface VerificationResult {
   remarks: string;
   verified_at: string;
   blockchain_record: BlockchainRecord | null;
+}
+
+export interface PrepareResult {
+  verification_id: string;
+  user_wallet: string;
+  ipfs_cid: string;
+  data_hash: string;
+  kyc_version: number;
+}
+
+export interface CompleteResult {
+  verification_id: string;
+  transaction_hash: string;
+  block_number: number;
+  ipfs_cid: string;
+  data_hash: string;
+  kyc_version: number;
 }
 
 export type KycStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -90,6 +107,27 @@ export interface KycSubmission {
   documents: KycDocument[];
   identity_document: KycDocument | null;
   selfie: KycDocument | null;
+}
+
+export interface KycSubmissionDetail {
+  id: string;
+  full_name: string;
+  date_of_birth: string;
+  country: string;
+  nationality: string;
+  document_number: string;
+  phone_number: string;
+  email: string;
+  address: string;
+  version: number;
+  status: KycStatus;
+  // status_display: string;
+  created_at: string;
+  updated_at: string;
+  // documents: KycDocument[];
+  identity_document: string | null;
+  selfie: string | null;
+  verification_id: string | null;
 }
 
 export class ApiError extends Error {
@@ -156,15 +194,14 @@ export const api = {
     }),
 
   addVerifier: (walletAddress: string) =>
-    request<AdminActionResponse>("/verifier/add", {
+    request<AdminActionResponse>("/verifiers", {
       method: "POST",
       body: JSON.stringify({ wallet_address: walletAddress }),
     }),
 
   removeVerifier: (walletAddress: string) =>
-    request<AdminActionResponse>("/verifier/remove", {
-      method: "POST",
-      body: JSON.stringify({ wallet_address: walletAddress }),
+    request<AdminActionResponse>(`/verifiers/${walletAddress}`, {
+      method: "DELETE",
     }),
 
   listBanks: () => request<unknown[]>("/banks/"),
@@ -194,7 +231,7 @@ export const api = {
     request<KycListItem[]>(`/verification/${status}`),
 
   getSubmission: (submissionId: string) =>
-    request<KycSubmission>(`/verification/${submissionId}`),
+    request<KycSubmissionDetail>(`/verification/${submissionId}`),
 
   approveSubmission: (submissionId: string, remarks: string) =>
     request<VerificationResult>(`/verification/${submissionId}/approve`, {
@@ -206,6 +243,20 @@ export const api = {
     request<VerificationResult>(`/verification/${submissionId}/reject`, {
       method: "POST",
       body: JSON.stringify({ remarks }),
+    }),
+
+  prepareSubmission: (verificationId: string) =>
+    request<PrepareResult>(`/verification/${verificationId}/prepare`, {
+      method: "POST",
+    }),
+
+  completeSubmission: (
+    verificationId: string,
+    payload: Record<string, unknown>,
+  ) =>
+    request<CompleteResult>(`/verification/${verificationId}/complete`, {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 
   verifyWalletOnChain: (walletAddress: string) =>

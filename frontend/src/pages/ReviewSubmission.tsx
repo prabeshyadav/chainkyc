@@ -1,13 +1,16 @@
+import { ArrowLeft, FileText } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
 import type { KycDocument } from "../api/client";
 import { Badge, Button, SectionCard, TopBar } from "../components/ui";
 import {
   useApproveSubmission,
+  useCompleteSubmission,
+  usePrepareSubmission,
   useRejectSubmission,
   useSubmission,
 } from "../queries/verifier";
+import { anchorKyc } from "../helper/anchorKyc";
 
 const statusTones = {
   PENDING: "warning",
@@ -54,18 +57,66 @@ export default function ReviewSubmission() {
   const { data: submission, isPending, isError, error } = useSubmission(id!);
   const approve = useApproveSubmission();
   const reject = useRejectSubmission();
+  const prepare = usePrepareSubmission();
+  const complete = useCompleteSubmission();
+
   const acting = approve.isPending || reject.isPending;
   const decisionError = approve.error ?? reject.error;
 
   if (!id) {
     return <Navigate to="/verifier" replace />;
   }
-
   function handleApprove() {
     setRemarksError("");
     approve.mutate(
       { id: id!, remarks },
-      { onSuccess: () => navigate("/verifier") },
+      {
+        onSuccess: (data) => {
+          console.log("approve succeeded");
+          prepare.mutate(
+            { id: data.id },
+            {
+              onSuccess: async (successResult) => {
+                console.log("prepare succeeded");
+                console.log({ successResult, data });
+                const { ipfs_cid, data_hash, verification_id } = successResult;
+                const userAddress = successResult.user_wallet;
+
+                if (!ipfs_cid || !data_hash || !userAddress) {
+                  console.error(
+                    "Missing cid/hash/userAddress, cannot anchor on-chain",
+                    { ipfs_cid, data_hash, userAddress },
+                  );
+                  return;
+                }
+
+                try {
+                  const { txHash, blockNumber } = await anchorKyc(
+                    userAddress,
+                    ipfs_cid,
+                    data_hash,
+                  );
+                  complete.mutate(
+                    {
+                      verificationId: verification_id,
+                      blockNumber,
+                      transactionHash: txHash,
+                    },
+                    {
+                      onSuccess: () => {
+                        console.log("complete succeeded");
+                        // navigate("/verifier");
+                      },
+                    },
+                  );
+                } catch (err) {
+                  console.error("On-chain anchoring failed", err);
+                }
+              },
+            },
+          );
+        },
+      },
     );
   }
 
@@ -118,7 +169,7 @@ export default function ReviewSubmission() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={statusTones[submission.status]}>
-                  {submission.status_display}
+                  {submission.status}
                 </Badge>
                 <Badge>v{submission.version}</Badge>
               </div>
@@ -157,15 +208,37 @@ export default function ReviewSubmission() {
               title="Documents"
               description="Files uploaded with this submission."
             >
-              {submission.documents.length === 0 ? (
+              {submission.identity_document && (
+                <DocumentRow
+                  doc={{
+                    id: "identity_document",
+                    document_type: "Identity Document",
+                    document_type_display: "",
+                    file: submission.identity_document,
+                    uploaded_at: "",
+                  }}
+                />
+              )}
+              {submission.selfie && (
+                <DocumentRow
+                  doc={{
+                    id: "identity_document",
+                    document_type: "Identity Document",
+                    document_type_display: "",
+                    file: submission.selfie,
+                    uploaded_at: "",
+                  }}
+                />
+              )}
+              {/* {submission.documents?.length === 0 ? (
                 <p className="text-sm text-ink-400">No documents attached.</p>
               ) : (
                 <div className="space-y-3">
-                  {submission.documents.map((doc) => (
+                  {submission.documents?.map((doc) => (
                     <DocumentRow key={doc.id} doc={doc} />
                   ))}
                 </div>
-              )}
+              )} */}
             </SectionCard>
 
             {submission.status === "PENDING" ? (
@@ -220,8 +293,9 @@ export default function ReviewSubmission() {
               </SectionCard>
             ) : (
               <p className="text-sm text-ink-400">
-                This submission has already been {submission.status_display.toLowerCase()}
-                — no further action is possible.
+                This submission has already been{" "}
+                {submission.status.toLowerCase()}— no further action is
+                possible.
               </p>
             )}
           </>
