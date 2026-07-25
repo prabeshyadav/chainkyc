@@ -16,9 +16,12 @@ from .schemas import (
 )
 from .services import KYCService
 
-
 router = Router(tags=["KYC"])
 
+
+# ============================================================================
+# Create KYC
+# ============================================================================
 
 @router.post(
     "/",
@@ -51,8 +54,94 @@ def create_kyc(
         return 201, submission
 
     except ValueError as exc:
-        return 400, {"message": str(exc)}
+        return 400, {
+            "message": str(exc)
+        }
 
+
+
+# ============================================================================
+# Latest KYC
+# ============================================================================
+
+@router.get(
+    "/me",
+    auth=UserAuth,
+    response={
+        200: KYCSubmissionResponseSchema,
+        404: MessageSchema,
+    },
+)
+def my_latest_kyc(request):
+    """
+    Return the authenticated user's latest KYC submission.
+    """
+
+    submission = KYCService.get_latest_submission(
+        request.auth
+    )
+
+    if submission is None:
+        return 404, {
+            "message": "No KYC submission found."
+        }
+
+    return 200, submission
+
+
+# ============================================================================
+# KYC History
+# ============================================================================
+
+@router.get(
+    "/history",
+    auth=UserAuth(),
+    response=List[KYCSubmissionListSchema],
+)
+def my_history(request):
+    """
+    Return the authenticated user's KYC history.
+    """
+
+    return KYCService.get_submission_history(
+        request.auth
+    )
+
+
+# ============================================================================
+# KYC Status
+# ============================================================================
+
+@router.get(
+    "/status",
+    auth=UserAuth(),
+)
+def submission_status(request):
+    """
+    Return the latest KYC status.
+    """
+
+    submission = KYCService.get_latest_submission(
+        request.auth
+    )
+
+    if submission is None:
+        return {
+            "submitted": False,
+            "status": "NOT_SUBMITTED",
+        }
+
+    return {
+        "submitted": True,
+        "submission_id": str(submission.id),
+        "status": submission.status,
+        "version": submission.version,
+    }
+    
+    
+# ============================================================================
+# Update KYC
+# ============================================================================
 
 @router.put(
     "/{submission_id}",
@@ -97,71 +186,7 @@ def update_kyc(
         return 200, submission
 
     except ValueError as exc:
-        return 400, {"message": str(exc)}
-
-
-@router.get(
-    "/me",
-    auth=UserAuth(),
-    response={
-        200: KYCSubmissionResponseSchema,
-        404: MessageSchema,
-    },
-)
-def my_latest_kyc(request):
-    """
-    Return the authenticated user's latest KYC submission.
-    """
-
-    submission = KYCService.get_latest_submission(
-        request.auth
-    )
-
-    if submission is None:
-        return 404, {
-            "message": "No KYC submission found."
+        return 400, {
+            "message": str(exc)
         }
-
-    return 200, submission
-
-
-@router.get(
-    "/history",
-    auth=UserAuth(),
-    response=List[KYCSubmissionListSchema],
-)
-def my_history(request):
-    """
-    Return the authenticated user's KYC history.
-    """
-
-    return KYCService.get_submission_history(
-        request.auth
-    )
-
-
-@router.get(
-    "/status",
-    auth=UserAuth(),
-)
-def submission_status(request):
-    """
-    Return the latest KYC status.
-    """
-
-    submission = KYCService.get_latest_submission(
-        request.auth
-    )
-
-    if submission is None:
-        return {
-            "submitted": False,
-            "status": "NOT_SUBMITTED",
-        }
-
-    return {
-        "submitted": True,
-        "submission_id": str(submission.id),
-        "status": submission.status,
-        "version": submission.version,
-    }
+    

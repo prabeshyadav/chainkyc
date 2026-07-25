@@ -61,18 +61,24 @@ class KYCDocumentResponseSchema(Schema):
         alias="get_document_type_display",
     )
 
-    file: str
+    file: str | None
 
     uploaded_at: datetime
 
     @staticmethod
-    def resolve_file(obj: KYCDocument):
-        return obj.file.url if obj.file else None
+    def resolve_file(obj: KYCDocument, context):
+        if not obj.file:
+            return None
+
+        request = context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.file.url)
+
+        return obj.file.url
 
     @staticmethod
     def resolve_document_type_display(obj: KYCDocument):
         return obj.get_document_type_display()
-
 
 class KYCSubmissionResponseSchema(Schema):
     id: uuid.UUID
