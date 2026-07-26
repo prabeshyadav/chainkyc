@@ -4,6 +4,9 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_KYC_REGISTRY_ADDRESS?: string;
   readonly VITE_CHAIN_ID?: string;
+  readonly VITE_RPC_URL?: string;
+  readonly VITE_CHAIN_NAME?: string;
+  readonly VITE_CURRENCY_SYMBOL?: string;
 }
 
 interface ImportMeta {

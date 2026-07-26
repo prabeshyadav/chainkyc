@@ -1,5 +1,6 @@
 export type ApprovalStep =
   | "approving"
+  | "network"
   | "checking"
   | "locating"
   | "preparing"

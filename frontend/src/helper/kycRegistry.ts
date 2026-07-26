@@ -1,7 +1,8 @@
-import { BrowserProvider, Contract, isAddress } from "ethers";
+import { Contract, isAddress } from "ethers";
+import { CHAIN_ID, assertOnExpectedChain, browserProvider } from "./chain";
 
 export const KYC_REGISTRY_ADDRESS = import.meta.env.VITE_KYC_REGISTRY_ADDRESS;
-export const CHAIN_ID = BigInt(import.meta.env.VITE_CHAIN_ID || 31337);
+export { CHAIN_ID };
 
 export const KYC_REGISTRY_ABI = [
   "function anchorKYC(address user, string calldata ipfsCid, bytes32 dataHash) external",
@@ -16,6 +17,17 @@ declare global {
   }
 }
 
+export class RegistryNotDeployedError extends Error {
+  constructor(address: string) {
+    super(
+      `No contract is deployed at ${address} on chain ${CHAIN_ID}. The registry ` +
+        `address is stale or the chain was reset — redeploy, then update ` +
+        `KYC_REGISTRY_ADDRESS and recreate the frontend container.`,
+    );
+    this.name = "RegistryNotDeployedError";
+  }
+}
+
 export function requireRegistryAddress(): string {
   if (!KYC_REGISTRY_ADDRESS || !isAddress(KYC_REGISTRY_ADDRESS)) {
     throw new Error(
@@ -25,16 +37,17 @@ export function requireRegistryAddress(): string {
   return KYC_REGISTRY_ADDRESS;
 }
 
-export function readOnlyRegistry(): Contract {
+export async function readOnlyRegistry(): Promise<Contract> {
   const address = requireRegistryAddress();
-  if (!window.ethereum) {
-    throw new Error("No injected wallet found (e.g. MetaMask)");
+  const provider = browserProvider();
+
+  await assertOnExpectedChain(provider);
+
+  if ((await provider.getCode(address)) === "0x") {
+    throw new RegistryNotDeployedError(address);
   }
-  return new Contract(
-    address,
-    KYC_REGISTRY_ABI,
-    new BrowserProvider(window.ethereum),
-  );
+
+  return new Contract(address, KYC_REGISTRY_ABI, provider);
 }
 
 export interface OnChainAnchorState {
@@ -50,7 +63,8 @@ export async function readAnchorState(
     throw new Error(`Invalid user address: ${userAddress}`);
   }
 
-  const count = Number(await readOnlyRegistry().getVersionCount(userAddress));
+  const registry = await readOnlyRegistry();
+  const count = Number(await registry.getVersionCount(userAddress));
 
   return { versionCount: count, anchored: count >= version };
 }
@@ -64,7 +78,7 @@ export async function findAnchorTx(
   userAddress: string,
   version: number,
 ): Promise<AnchorTxRef | null> {
-  const registry = readOnlyRegistry();
+  const registry = await readOnlyRegistry();
 
   const events = await registry.queryFilter(
     registry.filters.KYCVerified(userAddress, version),

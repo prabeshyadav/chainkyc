@@ -3,6 +3,7 @@ import type { ApprovalStep, FlowState } from "../../helper/approvalFlow";
 
 const STEP_LABELS: Record<ApprovalStep, string> = {
   approving: "Recording the decision",
+  network: "Connecting to the right network",
   checking: "Checking the blockchain",
   locating: "Locating the existing transaction",
   preparing: "Building the on-chain payload",

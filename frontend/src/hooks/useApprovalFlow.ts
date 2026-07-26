@@ -10,6 +10,7 @@ import type {
   FlowState,
 } from "../helper/approvalFlow";
 import { anchorKyc } from "../helper/anchorKyc";
+import { ensureChain } from "../helper/chain";
 import { findAnchorTx, readAnchorState } from "../helper/kycRegistry";
 import type { AnchorTxRef } from "../helper/kycRegistry";
 import {
@@ -70,8 +71,8 @@ export function useApprovalFlow({
 
     const resumeId = options.verificationId ?? approvedId.current;
     const head: ApprovalStep[] = resumeId
-      ? ["checking"]
-      : ["approving", "checking"];
+      ? ["network", "checking"]
+      : ["approving", "network", "checking"];
     setPlan([...head, ...ANCHOR_STEPS]);
 
     let step: ApprovalStep = head[0];
@@ -92,6 +93,9 @@ export function useApprovalFlow({
         verificationId = approved.id;
         approvedId.current = approved.id;
       }
+
+      go("network");
+      await ensureChain();
 
       go("checking");
       const onChain = await readAnchorState(walletAddress, version);

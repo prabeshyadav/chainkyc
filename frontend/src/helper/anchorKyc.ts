@@ -1,9 +1,6 @@
-import { BrowserProvider, Contract, isAddress } from "ethers";
-import {
-  CHAIN_ID,
-  KYC_REGISTRY_ABI,
-  KYC_REGISTRY_ADDRESS,
-} from "./kycRegistry";
+import { Contract, isAddress } from "ethers";
+import { ensureChain } from "./chain";
+import { KYC_REGISTRY_ABI, KYC_REGISTRY_ADDRESS } from "./kycRegistry";
 
 export interface AnchorKycResult {
   txHash: string;
@@ -38,26 +35,10 @@ export async function anchorKyc(
     );
   }
 
-  if (!window.ethereum) {
-    throw new Error("No injected wallet found (e.g. MetaMask)");
-  }
-
   onStage?.("wallet");
-  await window.ethereum.request({
-    method: "wallet_switchEthereumChain",
-    params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
-  });
-
-  const provider = new BrowserProvider(window.ethereum);
+  const provider = await ensureChain();
   await provider.send("eth_requestAccounts", []);
   const signer = await provider.getSigner();
-
-  const network = await provider.getNetwork();
-  if (network.chainId !== CHAIN_ID) {
-    console.warn(
-      `Wallet is on chainId ${network.chainId}, expected ${CHAIN_ID}`,
-    );
-  }
 
   const kycRegistry = new Contract(
     KYC_REGISTRY_ADDRESS,

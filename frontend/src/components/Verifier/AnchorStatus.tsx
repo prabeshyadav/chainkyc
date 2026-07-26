@@ -1,7 +1,16 @@
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
-import { Button, SectionCard } from "../ui";
+import { useState } from "react";
 import { errorMessage } from "../../helper/approvalFlow";
-import type { OnChainAnchorState } from "../../helper/kycRegistry";
+import {
+  CHAIN_NAME,
+  ChainMismatchError,
+  ensureChain,
+} from "../../helper/chain";
+import {
+  RegistryNotDeployedError,
+  type OnChainAnchorState,
+} from "../../helper/kycRegistry";
+import { Button, SectionCard } from "../ui";
 
 export default function AnchorStatus({
   version,
@@ -20,6 +29,22 @@ export default function AnchorStatus({
   onRecheck: () => void;
   onAnchor: () => void;
 }) {
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
+  async function handleSwitchNetwork() {
+    setSwitching(true);
+    setSwitchError(null);
+    try {
+      await ensureChain();
+      onRecheck();
+    } catch (err) {
+      setSwitchError(errorMessage(err));
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   return (
     <SectionCard
       title="Blockchain anchor"
@@ -40,9 +65,29 @@ export default function AnchorStatus({
             Could not read the registry, so the on-chain state is unknown:{" "}
             {errorMessage(error)}
           </p>
-          <Button variant="secondary" onClick={onRecheck}>
-            Check again
-          </Button>
+
+          {switchError && (
+            <p className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-lg px-4 py-3">
+              {switchError}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            {error instanceof ChainMismatchError && (
+              <Button
+                variant="success"
+                disabled={switching}
+                onClick={handleSwitchNetwork}
+              >
+                {switching ? "Switching..." : `Switch to ${CHAIN_NAME}`}
+              </Button>
+            )}
+            {!(error instanceof RegistryNotDeployedError) && (
+              <Button variant="secondary" onClick={onRecheck}>
+                Check again
+              </Button>
+            )}
+          </div>
         </div>
       ) : state?.anchored ? (
         <p className="flex items-start gap-2.5 text-sm text-ink-600">
