@@ -12,11 +12,11 @@ from management.user_api import router as user_router
 api = NinjaAPI(title="Reusable KYC API", version="1.0.0")
 
 api.add_router("/auth", auth_router)
-api.add_router("/", management_router)
 api.add_router("/user", user_router)
 
 api.add_router("/kyc", kyc_router)
 api.add_router("/verification", verification_router)
-api.add_router("/organizations", organization_router)
 api.add_router("/banks", bank_router)
+api.add_router("/", management_router)
+api.add_router("/organizations", organization_router)
 api.add_router("/blockchain", blockchain_router)

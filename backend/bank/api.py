@@ -9,6 +9,7 @@ from .schemas import (
     BankAccessSchema,
     AccessResponseSchema,
     AccessStatusSchema,
+    PublicKYCResponseSchema,
 )
 
 router = Router(tags=["Bank"])
@@ -28,6 +29,19 @@ def me(request):
         "role": request.auth.role,
     }
 
+
+@router.get(
+    "/verify/{user_wallet}",
+    auth=bank_auth,
+    response=PublicKYCResponseSchema,
+)
+def verify_user(
+    request,
+    user_wallet: str,
+):
+    return BankService.verify_user(
+        user_wallet
+    )
 
 # --------------------------------------------------------
 # View User KYC Metadata

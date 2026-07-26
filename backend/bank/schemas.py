@@ -43,6 +43,13 @@ class BankKYCResponseSchema(Schema):
     verified_at: int
     kyc_data: Dict[str, Any]
     
+class PublicKYCResponseSchema(Schema):
+    verified: bool
+    version: int
+    ipfs_cid: str
+    data_hash: str
+    verified_at: int
+    verified_by: str
     
 class BankAccessSchema(Schema):
     bank_wallet: str
@@ -61,3 +68,4 @@ class AccessStatusSchema(Schema):
 class BankDecryptedKYCResponseSchema(Schema):
     user_wallet: str
     kyc: dict
+

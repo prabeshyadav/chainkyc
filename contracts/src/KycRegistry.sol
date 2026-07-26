@@ -301,6 +301,42 @@ contract KYCRegistry {
         );
     }
 
+    // -------------------------------------------------------------------
+    // Public KYC Metadata
+    // -------------------------------------------------------------------
+
+    function getPublicKYC(
+        address user
+    )
+        external
+        view
+        returns(
+            uint256 version,
+            string memory ipfsCid,
+            bytes32 dataHash,
+            uint256 verifiedAt,
+            address verifiedBy
+        )
+    {
+        require(
+            kycHistory[user].length > 0,
+            "No verified KYC"
+        );
+
+        KYCRecord memory record =
+            kycHistory[user][
+                kycHistory[user].length - 1
+            ];
+
+        return (
+            record.version,
+            record.ipfsCid,
+            record.dataHash,
+            record.verifiedAt,
+            record.verifiedBy
+        );
+    }
+
 
 
 
