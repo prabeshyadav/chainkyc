@@ -1,3 +1,4 @@
+import AddBankSection from "../components/Admin/AddBankSection";
 import AddVerifierSection from "../components/Admin/AddVerifierSection";
 import { TopBar } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
@@ -22,6 +23,7 @@ export default function AdminConsole() {
         </div>
 
         <AddVerifierSection />
+        <AddBankSection />
       </div>
     </div>
   );

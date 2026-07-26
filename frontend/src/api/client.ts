@@ -195,6 +195,7 @@ export const api = {
     }),
 
   getVerifiers: () => request<string[]>("/verifiers"),
+
   addVerifier: (walletAddress: string) =>
     request<AdminActionResponse>("/verifiers", {
       method: "POST",
@@ -206,7 +207,18 @@ export const api = {
       method: "DELETE",
     }),
 
-  listBanks: () => request<unknown[]>("/banks/"),
+  getBanks: () => request<string[]>("/banks"),
+
+  addBank: (walletAddress: string) =>
+    request<AdminActionResponse>("/banks", {
+      method: "POST",
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    }),
+
+  removeBank: (walletAddress: string) =>
+    request<AdminActionResponse>(`/banks/${walletAddress}`, {
+      method: "DELETE",
+    }),
 
   registerBank: (payload: Record<string, unknown>) =>
     request<unknown>("/banks/register", {
