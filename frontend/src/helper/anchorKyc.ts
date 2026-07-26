@@ -1,26 +1,22 @@
 import { BrowserProvider, Contract, isAddress } from "ethers";
-
-const KYC_REGISTRY_ADDRESS = import.meta.env.VITE_KYC_REGISTRY_ADDRESS;
-const CHAIN_ID = BigInt(import.meta.env.VITE_CHAIN_ID || 31337);
-
-const KYC_REGISTRY_ABI = [
-  "function anchorKYC(address user, string calldata ipfsCid, bytes32 dataHash) external",
-];
+import {
+  CHAIN_ID,
+  KYC_REGISTRY_ABI,
+  KYC_REGISTRY_ADDRESS,
+} from "./kycRegistry";
 
 export interface AnchorKycResult {
   txHash: string;
   blockNumber: number;
 }
 
-declare global {
-  interface Window {
-    ethereum?: import("ethers").Eip1193Provider;
-  }
-}
+export type AnchorKycStage = "wallet" | "signing" | "confirming";
+
 export async function anchorKyc(
   userAddress: string,
   ipfsCid: string,
   sha256Hash: string,
+  onStage?: (stage: AnchorKycStage) => void,
 ): Promise<AnchorKycResult> {
   if (!isAddress(userAddress)) {
     throw new Error(`Invalid user address: ${userAddress}`);
@@ -45,6 +41,8 @@ export async function anchorKyc(
   if (!window.ethereum) {
     throw new Error("No injected wallet found (e.g. MetaMask)");
   }
+
+  onStage?.("wallet");
   await window.ethereum.request({
     method: "wallet_switchEthereumChain",
     params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
@@ -69,12 +67,14 @@ export async function anchorKyc(
 
   let tx;
   try {
+    onStage?.("signing");
     tx = await kycRegistry.anchorKYC(userAddress, ipfsCid, dataHash);
   } catch (err: any) {
     throw new Error(`anchorKYC call failed: ${err.reason || err.message}`);
   }
 
   console.log("Tx submitted:", tx.hash);
+  onStage?.("confirming");
   const receipt = await tx.wait();
   if (!receipt) {
     throw new Error("Transaction was not mined (receipt is null)");

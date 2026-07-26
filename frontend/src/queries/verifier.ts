@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
 import type { PrepareResult, SubmissionListStatus } from "../api/client";
+import { api } from "../api/client";
+import { readAnchorState } from "../helper/kycRegistry";
 
 export const verifierKeys = {
   all: ["verifier"] as const,
@@ -8,6 +9,8 @@ export const verifierKeys = {
   submissions: (status: SubmissionListStatus) =>
     [...verifierKeys.all, "submissions", status] as const,
   submission: (id: string) => [...verifierKeys.all, "submission", id] as const,
+  anchor: (wallet: string, version: number) =>
+    [...verifierKeys.all, "anchor", wallet.toLowerCase(), version] as const,
 };
 
 export function useVerifierDashboard() {
@@ -28,6 +31,20 @@ export function useSubmission(id: string) {
   return useQuery({
     queryKey: verifierKeys.submission(id),
     queryFn: () => api.getSubmission(id),
+  });
+}
+
+export function useAnchorState(
+  walletAddress: string | undefined,
+  version: number | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: verifierKeys.anchor(walletAddress ?? "", version ?? 0),
+    queryFn: () => readAnchorState(walletAddress!, version!),
+    enabled: enabled && Boolean(walletAddress) && Boolean(version),
+    retry: false,
+    staleTime: 0,
   });
 }
 

@@ -111,6 +111,7 @@ export interface KycSubmission {
 
 export interface KycSubmissionDetail {
   id: string;
+  wallet_address: string;
   full_name: string;
   date_of_birth: string;
   country: string;
@@ -193,6 +194,7 @@ export const api = {
       body: formData,
     }),
 
+  getVerifiers: () => request<string[]>("/verifiers"),
   addVerifier: (walletAddress: string) =>
     request<AdminActionResponse>("/verifiers", {
       method: "POST",

@@ -2,15 +2,16 @@ import { ArrowLeft, FileText } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import type { KycDocument } from "../api/client";
-import { Badge, Button, SectionCard, TopBar } from "../components/ui";
+import { Badge, SectionCard, TopBar } from "../components/ui";
+import AnchorStatus from "../components/Verifier/AnchorStatus";
+import ApprovalStatusCard from "../components/Verifier/ApprovalStatusCard";
+import DecisionForm from "../components/Verifier/DecisionForm";
+import { useApprovalFlow } from "../hooks/useApprovalFlow";
 import {
-  useApproveSubmission,
-  useCompleteSubmission,
-  usePrepareSubmission,
+  useAnchorState,
   useRejectSubmission,
   useSubmission,
 } from "../queries/verifier";
-import { anchorKyc } from "../helper/anchorKyc";
 
 const statusTones = {
   PENDING: "warning",
@@ -52,80 +53,27 @@ export default function ReviewSubmission() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [remarks, setRemarks] = useState("");
-  const [remarksError, setRemarksError] = useState("");
 
   const { data: submission, isPending, isError, error } = useSubmission(id!);
-  const approve = useApproveSubmission();
   const reject = useRejectSubmission();
-  const prepare = usePrepareSubmission();
-  const complete = useCompleteSubmission();
 
-  const acting = approve.isPending || reject.isPending;
-  const decisionError = approve.error ?? reject.error;
+  const approval = useApprovalFlow({
+    submissionId: id!,
+    walletAddress: submission?.wallet_address,
+    version: submission?.version,
+  });
+
+  const anchorState = useAnchorState(
+    submission?.wallet_address,
+    submission?.version,
+    submission?.status === "APPROVED" && !approval.active,
+  );
 
   if (!id) {
     return <Navigate to="/verifier" replace />;
   }
-  function handleApprove() {
-    setRemarksError("");
-    approve.mutate(
-      { id: id!, remarks },
-      {
-        onSuccess: (data) => {
-          console.log("approve succeeded");
-          prepare.mutate(
-            { id: data.id },
-            {
-              onSuccess: async (successResult) => {
-                console.log("prepare succeeded");
-                console.log({ successResult, data });
-                const { ipfs_cid, data_hash, verification_id } = successResult;
-                const userAddress = successResult.user_wallet;
-
-                if (!ipfs_cid || !data_hash || !userAddress) {
-                  console.error(
-                    "Missing cid/hash/userAddress, cannot anchor on-chain",
-                    { ipfs_cid, data_hash, userAddress },
-                  );
-                  return;
-                }
-
-                try {
-                  const { txHash, blockNumber } = await anchorKyc(
-                    userAddress,
-                    ipfs_cid,
-                    data_hash,
-                  );
-                  complete.mutate(
-                    {
-                      verificationId: verification_id,
-                      blockNumber,
-                      transactionHash: txHash,
-                    },
-                    {
-                      onSuccess: () => {
-                        console.log("complete succeeded");
-                        // navigate("/verifier");
-                      },
-                    },
-                  );
-                } catch (err) {
-                  console.error("On-chain anchoring failed", err);
-                }
-              },
-            },
-          );
-        },
-      },
-    );
-  }
 
   function handleReject() {
-    if (!remarks.trim()) {
-      setRemarksError("Remarks are required when rejecting a submission.");
-      return;
-    }
-    setRemarksError("");
     reject.mutate(
       { id: id!, remarks },
       { onSuccess: () => navigate("/verifier") },
@@ -230,67 +178,36 @@ export default function ReviewSubmission() {
                   }}
                 />
               )}
-              {/* {submission.documents?.length === 0 ? (
-                <p className="text-sm text-ink-400">No documents attached.</p>
-              ) : (
-                <div className="space-y-3">
-                  {submission.documents?.map((doc) => (
-                    <DocumentRow key={doc.id} doc={doc} />
-                  ))}
-                </div>
-              )} */}
             </SectionCard>
 
-            {submission.status === "PENDING" ? (
-              <SectionCard
-                title="Decision"
-                description="Approving issues the KYC token; rejecting sends it back to the customer."
-              >
-                <label className="block mb-4">
-                  <span className="block text-sm font-medium text-ink-900 mb-1.5">
-                    Remarks
-                  </span>
-                  <textarea
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    rows={3}
-                    placeholder="Optional for approval, required for rejection"
-                    className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:border-transparent ${
-                      remarksError
-                        ? "border-red-400 focus:ring-red-500"
-                        : "border-line focus:ring-accent-600"
-                    }`}
-                  />
-                  {remarksError && (
-                    <span className="block text-xs text-red-600 mt-1">
-                      {remarksError}
-                    </span>
-                  )}
-                </label>
-
-                {decisionError && (
-                  <p className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-lg px-4 py-3 mb-4">
-                    {decisionError.message}
-                  </p>
-                )}
-
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant="danger"
-                    disabled={acting}
-                    onClick={handleReject}
-                  >
-                    {reject.isPending ? "Rejecting..." : "Reject"}
-                  </Button>
-                  <Button
-                    variant="success"
-                    disabled={acting}
-                    onClick={handleApprove}
-                  >
-                    {approve.isPending ? "Approving..." : "Approve"}
-                  </Button>
-                </div>
-              </SectionCard>
+            {approval.active ? (
+              <ApprovalStatusCard
+                approval={approval}
+                onLeave={() => navigate("/verifier")}
+              />
+            ) : submission.status === "PENDING" ? (
+              <DecisionForm
+                remarks={remarks}
+                onRemarksChange={setRemarks}
+                rejecting={reject.isPending}
+                error={approval.approveError ?? reject.error}
+                onApprove={() => approval.run({ remarks })}
+                onReject={handleReject}
+              />
+            ) : submission.status === "APPROVED" ? (
+              <AnchorStatus
+                version={submission.version}
+                isChecking={anchorState.isPending}
+                error={anchorState.error}
+                state={anchorState.data}
+                canAnchor={Boolean(submission.verification_id)}
+                onRecheck={() => anchorState.refetch()}
+                onAnchor={() =>
+                  approval.run({
+                    verificationId: submission.verification_id!,
+                  })
+                }
+              />
             ) : (
               <p className="text-sm text-ink-400">
                 This submission has already been{" "}

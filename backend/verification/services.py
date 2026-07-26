@@ -347,9 +347,9 @@ class VerificationService:
             )
 
 
-        # 4. Check KYCAnchored event
+        # 4. Check KYCVerified event
         events = (
-            kyc_registry.events.KYCAnchored()
+            kyc_registry.events.KYCVerified()
             .process_receipt(receipt)
         )
 

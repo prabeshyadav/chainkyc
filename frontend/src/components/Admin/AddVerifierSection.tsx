@@ -1,28 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useAddVerifier, useRemoveVerifier } from "../../queries/admin";
+import {
+  useAddVerifier,
+  useRemoveVerifier,
+  useVerifiers,
+} from "../../queries/admin";
 import { Button, Input, SectionCard } from "../ui";
-
-interface Verifier {
-  wallet: string;
-  name?: string;
-  addedOn: string;
-}
-
-const initialVerifiers: Verifier[] = [
-  {
-    wallet: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    name: "NRB Verifier Cell",
-    addedOn: "Added May 12, 2026",
-  },
-  {
-    wallet: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
-    name: "Verify Nepal Pvt. Ltd.",
-    addedOn: "Added Jun 3, 2026",
-  },
-];
 
 const verifierSchema = z.object({
   wallet: z
@@ -36,7 +20,7 @@ const verifierSchema = z.object({
 type VerifierFormValues = z.infer<typeof verifierSchema>;
 
 const AddVerifierSection = () => {
-  const [verifiers, setVerifiers] = useState<Verifier[]>(initialVerifiers);
+  const { data: verifiers = [], isLoading, isError, error } = useVerifiers();
   const addVerifier = useAddVerifier();
   const removeVerifier = useRemoveVerifier();
   const {
@@ -51,27 +35,19 @@ const AddVerifierSection = () => {
   });
 
   const onAddVerifier = handleSubmit(({ wallet }) => {
-    if (
-      verifiers.some((v) => v.wallet.toLowerCase() === wallet.toLowerCase())
-    ) {
+    if (verifiers.some((v) => v.toLowerCase() === wallet.toLowerCase())) {
       setError("wallet", { message: "This wallet is already a verifier." });
       return;
     }
     addVerifier.mutate(wallet, {
-      onSuccess: () => {
-        setVerifiers((list) => [{ wallet, addedOn: "Added today" }, ...list]);
-        reset();
-      },
+      onSuccess: () => reset(),
     });
   });
 
   function onRemoveVerifier(wallet: string) {
-    removeVerifier.mutate(wallet, {
-      onSuccess: () => {
-        setVerifiers((list) => list.filter((v) => v.wallet !== wallet));
-      },
-    });
+    removeVerifier.mutate(wallet);
   }
+
   return (
     <SectionCard
       title="Verifiers"
@@ -96,34 +72,36 @@ const AddVerifierSection = () => {
         </Button>
       </form>
 
-      {verifiers.length === 0 ? (
+      {isLoading ? (
+        <p className="text-sm text-ink-400">Loading verifiers...</p>
+      ) : isError ? (
+        <p className="text-sm text-red-600">
+          Could not load verifiers: {error.message}
+        </p>
+      ) : verifiers.length === 0 ? (
         <p className="text-sm text-ink-400">No verifiers on the network yet.</p>
       ) : (
         <div className="space-y-3">
-          {verifiers.map((v) => {
+          {verifiers.map((wallet) => {
             const removing =
-              removeVerifier.isPending && removeVerifier.variables === v.wallet;
+              removeVerifier.isPending && removeVerifier.variables === wallet;
             return (
               <div
-                key={v.wallet}
+                key={wallet}
                 className="flex items-center gap-3 border border-line rounded-lg px-4 py-3"
               >
                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-ink-600">
                   VF
                 </div>
                 <div className="flex-1 min-w-0">
-                  {v.name && (
-                    <p className="font-medium text-ink-900 text-sm">{v.name}</p>
-                  )}
                   <p className="text-xs text-ink-600 font-mono truncate">
-                    {v.wallet}
+                    {wallet}
                   </p>
-                  <p className="text-xs text-ink-400">{v.addedOn}</p>
                 </div>
                 <Button
                   variant="danger"
                   disabled={removing}
-                  onClick={() => onRemoveVerifier(v.wallet)}
+                  onClick={() => onRemoveVerifier(wallet)}
                 >
                   {removing ? "Removing..." : "Remove"}
                 </Button>
@@ -137,10 +115,6 @@ const AddVerifierSection = () => {
           {removeVerifier.error.message}
         </p>
       )}
-      <p className="text-xs text-ink-400 mt-4">
-        This list is demo data until a list-verifiers API exists — add and
-        remove actions call the network for real.
-      </p>
     </SectionCard>
   );
 };
