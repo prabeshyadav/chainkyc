@@ -28,11 +28,11 @@ SECRET_KEY = os.environ.get(
     "django-insecure-j=b1-5gw@9bk)0z^tvp7^to+qft3mod6g8i-#_wls@t(86d6a-",
 )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,chainkyc.vercel.app").split(",")
     if host.strip()
 ]
 
