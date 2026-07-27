@@ -2,15 +2,15 @@ from ninja import Router
 
 from management.jwt_auth import bank_auth, user_auth
 
-from .service import BankService
 from .schemas import (
-    BankDecryptedKYCResponseSchema,
-    BankKYCResponseSchema,
-    BankAccessSchema,
     AccessResponseSchema,
     AccessStatusSchema,
+    BankAccessSchema,
+    CheckKYCResponseSchema,
+    MessageSchema,
     PublicKYCResponseSchema,
 )
+from .service import BankService
 
 router = Router(tags=["Bank"])
 
@@ -30,36 +30,81 @@ def me(request):
     }
 
 
+# --------------------------------------------------------
+# Public Verification
+# --------------------------------------------------------
+
 @router.get(
     "/verify/{user_wallet}",
     auth=bank_auth,
     response=PublicKYCResponseSchema,
 )
-def verify_user(
-    request,
-    user_wallet: str,
-):
-    return BankService.verify_user(
-        user_wallet
-    )
+def verify_user(request, user_wallet: str):
+    """
+    Public blockchain verification.
+    No KYC data is returned.
+    """
+    return BankService.verify_user(user_wallet)
+
 
 # --------------------------------------------------------
-# View User KYC Metadata
+# Full KYC
 # --------------------------------------------------------
 
 @router.get(
-    "/kyc/{wallet_address}",
+    "/kyc/{user_wallet}",
     auth=bank_auth,
-    response=BankKYCResponseSchema,
+    response={
+        200: CheckKYCResponseSchema,
+        403: MessageSchema,
+    },
 )
-def get_user_kyc(
-    request,
-    wallet_address: str,
-):
-    return BankService.check_kyc(
-        wallet_address,
-        request.auth.wallet_address,
-    )
+def get_user_kyc(request, user_wallet: str):
+    """
+    Return the user's decrypted KYC.
+    Bank wallet always comes from JWT.
+    """
+    try:
+        result = BankService.check_kyc(
+            user_wallet=user_wallet,
+            bank_wallet=request.auth.wallet_address,
+        )
+        return 200, result
+
+    except ValueError as exc:
+        return 403, {
+            "message": str(exc),
+        }
+
+
+# --------------------------------------------------------
+# Preview
+# --------------------------------------------------------
+
+@router.get(
+    "/kyc/{user_wallet}/preview",
+    auth=bank_auth,
+    response={
+        200: dict,
+        403: MessageSchema,
+    },
+)
+def get_kyc_preview(request, user_wallet: str):
+    """
+    Same as /kyc/{user_wallet}
+    but Base64 images are truncated.
+    """
+    try:
+        result = BankService.check_kyc_preview(
+            user_wallet=user_wallet,
+            bank_wallet=request.auth.wallet_address,
+        )
+        return 200, result
+
+    except ValueError as exc:
+        return 403, {
+            "message": str(exc),
+        }
 
 
 # --------------------------------------------------------
@@ -69,35 +114,52 @@ def get_user_kyc(
 @router.post(
     "/grant-access",
     auth=user_auth,
-    response=AccessResponseSchema,
+    response={
+        200: AccessResponseSchema,
+        400: MessageSchema,
+    },
 )
-def grant_access(
-    request,
-    payload: BankAccessSchema,
-):
+def grant_access(request, payload: BankAccessSchema):
     """
-    Grant a bank permission to access the user's KYC.
+    User grants a bank permission
+    to read their KYC.
     """
-    return BankService.grant_access(
-        payload.bank_wallet,
-    )
+    try:
+        result = BankService.grant_access(
+            user_wallet=request.auth.wallet_address,
+            bank_wallet=payload.bank_wallet,
+        )
+        return 200, result
+
+    except ValueError as exc:
+        return 400, {
+            "message": str(exc),
+        }
 
 
 @router.post(
     "/revoke-access",
     auth=user_auth,
-    response=AccessResponseSchema,
+    response={
+        200: AccessResponseSchema,
+        400: MessageSchema,
+    },
 )
-def revoke_access(
-    request,
-    payload: BankAccessSchema,
-):
+def revoke_access(request, payload: BankAccessSchema):
     """
-    Revoke a bank's permission to access the user's KYC.
+    User revokes a bank's permission.
     """
-    return BankService.revoke_access(
-        payload.bank_wallet,
-    )
+    try:
+        result = BankService.revoke_access(
+            user_wallet=request.auth.wallet_address,
+            bank_wallet=payload.bank_wallet,
+        )
+        return 200, result
+
+    except ValueError as exc:
+        return 400, {
+            "message": str(exc),
+        }
 
 
 @router.get(
@@ -105,34 +167,12 @@ def revoke_access(
     auth=user_auth,
     response=AccessStatusSchema,
 )
-def access_status(
-    request,
-    bank_wallet: str,
-):
+def access_status(request, bank_wallet: str):
     """
-    Check whether the specified bank currently has permission
-    to access the user's KYC.
+    Check whether the bank currently
+    has access to the user's KYC.
     """
     return BankService.has_access(
         request.auth.wallet_address,
         bank_wallet,
-    )
-
-
-# --------------------------------------------------------
-# Decrypt User KYC
-# --------------------------------------------------------
-
-@router.get(
-    "/kyc/{user_wallet}/decrypt",
-    auth=bank_auth,
-    response=BankDecryptedKYCResponseSchema,
-)
-def decrypt_kyc(
-    request,
-    user_wallet: str,
-):
-    return BankService.get_decrypted_kyc(
-        user_wallet=user_wallet,
-        bank_wallet=request.auth.wallet_address,
     )
