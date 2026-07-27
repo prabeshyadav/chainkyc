@@ -82,8 +82,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if os.environ.get("POSTGRES_DB"):
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(DATABASE_URL)
+    }
+elif os.environ.get("POSTGRES_DB"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -101,8 +106,6 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
-import os
 
 BLOCKCHAIN_RPC_URL = os.getenv("BLOCKCHAIN_RPC_URL")
 ROLE_MANAGER_ADDRESS = os.getenv("ROLE_MANAGER_ADDRESS")
