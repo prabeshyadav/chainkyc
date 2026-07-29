@@ -122,13 +122,50 @@ export interface KycSubmissionDetail {
   address: string;
   version: number;
   status: KycStatus;
-  // status_display: string;
   created_at: string;
   updated_at: string;
-  // documents: KycDocument[];
   identity_document: string | null;
   selfie: string | null;
   verification_id: string | null;
+}
+
+export interface BankKycPackage {
+  submission?: {
+    id: string;
+    status: KycStatus;
+    version: number;
+    created_at: string;
+    updated_at: string;
+  };
+  user?: {
+    wallet_address: string;
+    full_name: string;
+    date_of_birth: string;
+    country: string;
+    nationality: string;
+    phone_number: string;
+    email: string;
+    address: string;
+    document_number: string;
+  };
+  documents?: {
+    document_type: string | null;
+    identity_document: string | null;
+    selfie: string | null;
+  };
+  verification?: {
+    verifier_wallet: string;
+    remarks: string;
+    verified_at: string;
+  };
+}
+
+export interface BankKycResponse {
+  user_wallet: string;
+  ipfs_cid: string;
+  data_hash: string;
+  verified_at: number;
+  kyc_data: BankKycPackage;
 }
 
 export class ApiError extends Error {
@@ -275,6 +312,9 @@ export const api = {
 
   verifyWalletOnChain: (walletAddress: string) =>
     request<unknown>(`/blockchain/verify/${walletAddress}`),
+
+  getBankKyc: (walletAddress: string) =>
+    request<BankKycResponse>(`/banks/kyc/${walletAddress}`),
 };
 
 export function saveTokens({ accessToken }: { accessToken: string }) {
