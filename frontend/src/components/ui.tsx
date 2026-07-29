@@ -1,10 +1,10 @@
-import { ShieldCheck } from "lucide-react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import image from "../assets/logo.jpeg";
 import { useAuthStore } from "../store/authStore";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
@@ -20,7 +20,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
   const variants: Record<ButtonVariant, string> = {
     primary: "bg-accent-600 text-white hover:bg-accent-700",
     secondary: "bg-white text-ink-900 border border-line hover:bg-gray-50",
@@ -123,13 +123,12 @@ export function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-30 py-4 border-b border-line bg-white">
+    <header className="sticky top-0 z-50 h-(--topbar-h) flex items-center justify-between px-30 border-b border-line bg-[#f7f8f6]">
       <button
         onClick={() => navigate("/")}
-        className="flex items-center gap-2 font-display font-semibold text-ink-900"
+        className="flex items-center gap-2 font-semibold text-ink-900"
       >
-        <ShieldCheck size={20} className="text-accent-600" />
-        VerifyChain
+        <img src={image} width={120} />
       </button>
       {authenticated && (
         <div className="flex items-center gap-3">
@@ -168,7 +167,33 @@ export function Input({ label, hint, error, ...props }: InputProps) {
         aria-invalid={error ? true : undefined}
         {...props}
       />
-      {error && <span className="block text-xs text-red-600 mt-1">{error}</span>}
+      {error && (
+        <span className="block text-xs text-red-600 mt-1">{error}</span>
+      )}
     </label>
+  );
+}
+
+export function Stat({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Card className="p-4 flex items-center gap-3">
+      <div className="w-9 h-9 rounded-lg bg-gray-100 text-ink-600 flex items-center justify-center">
+        {icon}
+      </div>
+      <div>
+        <p className="font-display text-xl font-semibold text-ink-900 leading-tight">
+          {value}
+        </p>
+        <p className="text-xs text-ink-600">{label}</p>
+      </div>
+    </Card>
   );
 }

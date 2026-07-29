@@ -1,15 +1,16 @@
 import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import RequireRole from "./components/RequireRole";
-import { useAuthStore } from "./store/authStore";
-import Landing from "./pages/Landing";
-import SubmitKyc from "./pages/SubmitKyc";
+import AdminConsole from "./pages/AdminConsole";
+import BankConsole from "./pages/BankConsole";
+import BankCustomerDetail from "./pages/BankCustomerDetail";
 import Confirmation from "./pages/Confirmation";
 import CustomerDashboard from "./pages/CustomerDashboard";
-import InstitutionConsole from "./pages/InstitutionConsole";
-import AdminConsole from "./pages/AdminConsole";
-import VerifierConsole from "./pages/VerifierConsole";
+import Landing from "./pages/Landing";
 import ReviewSubmission from "./pages/ReviewSubmission";
+import SubmitKyc from "./pages/SubmitKyc";
+import VerifierConsole from "./pages/VerifierConsole";
+import { useAuthStore } from "./store/authStore";
 
 const App = () => {
   const restoreSession = useAuthStore((s) => s.restoreSession);
@@ -62,10 +63,18 @@ const App = () => {
         }
       />
       <Route
-        path="/institution"
+        path="/bank"
         element={
           <RequireRole roles={["BANK"]}>
-            <InstitutionConsole />
+            <BankConsole />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/bank/customers/:address"
+        element={
+          <RequireRole roles={["BANK"]}>
+            <BankCustomerDetail />
           </RequireRole>
         }
       />

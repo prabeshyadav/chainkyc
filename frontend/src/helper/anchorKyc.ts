@@ -1,6 +1,6 @@
 import { Contract, isAddress } from "ethers";
 import { ensureChain } from "./chain";
-import { KYC_REGISTRY_ABI, KYC_REGISTRY_ADDRESS } from "./kycRegistry";
+import { KYC_REGISTRY_ABI, KYC_REGISTRY_ADDRESS } from "./registry";
 
 export interface AnchorKycResult {
   txHash: string;

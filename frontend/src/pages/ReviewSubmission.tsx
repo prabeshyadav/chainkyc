@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import type { KycDocument } from "../api/client";
 import { Badge, SectionCard, TopBar } from "../components/ui";
+import PersonalDetail from "../components/ui/DetailRow";
 import AnchorStatus from "../components/Verifier/AnchorStatus";
 import ApprovalStatusCard from "../components/Verifier/ApprovalStatusCard";
 import DecisionForm from "../components/Verifier/DecisionForm";
@@ -29,9 +30,7 @@ function DocumentRow({ doc }: { doc: KycDocument }) {
         <p className="font-medium text-ink-900 text-sm">
           {doc.document_type_display}
         </p>
-        <p className="text-xs text-ink-600">
-          Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
-        </p>
+        <p className="text-xs text-ink-600">{doc.document_type}</p>
       </div>
       {doc.file ? (
         <a
@@ -124,32 +123,15 @@ export default function ReviewSubmission() {
             </div>
 
             <SectionCard title="Applicant details">
-              <div className="border border-line rounded-lg divide-y divide-line">
-                {[
-                  ["Full legal name", submission.full_name],
-                  ["Date of birth", submission.date_of_birth],
-                  ["Country", submission.country],
-                  ["Nationality", submission.nationality],
-                  ["Document number", submission.document_number],
-                  ["Phone number", submission.phone_number],
-                  ["Email", submission.email],
-                  ["Permanent address", submission.address],
-                  [
-                    "Submitted on",
-                    new Date(submission.created_at).toLocaleString(),
-                  ],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex justify-between gap-4 px-4 py-3 text-sm"
-                  >
-                    <span className="text-ink-600 shrink-0">{label}</span>
-                    <span className="text-ink-900 font-medium text-right">
-                      {value || "—"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <PersonalDetail
+                fullName={submission?.full_name}
+                dob={submission?.date_of_birth}
+                country={submission?.country}
+                nationality={submission?.nationality}
+                phoneNumber={submission?.phone_number}
+                email={submission?.email}
+                address={submission?.address}
+              />
             </SectionCard>
 
             <SectionCard
@@ -171,7 +153,7 @@ export default function ReviewSubmission() {
                 <DocumentRow
                   doc={{
                     id: "identity_document",
-                    document_type: "Identity Document",
+                    document_type: "Passport size photo",
                     document_type_display: "",
                     file: submission.selfie,
                     uploaded_at: "",

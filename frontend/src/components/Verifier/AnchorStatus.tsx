@@ -6,11 +6,9 @@ import {
   ChainMismatchError,
   ensureChain,
 } from "../../helper/chain";
-import {
-  RegistryNotDeployedError,
-  type OnChainAnchorState,
-} from "../../helper/kycRegistry";
+import { type OnChainAnchorState } from "../../helper/kycRegistry";
 import { Button, SectionCard } from "../ui";
+import { RegistryNotDeployedError } from "../../helper/error";
 
 export default function AnchorStatus({
   version,

@@ -1,6 +1,7 @@
 import { Clock, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ComponentType } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import BankAccessSection from "../components/Customer/BankAccessSection";
 import { Button, TopBar } from "../components/ui";
 import { useUserDashboard } from "../queries/user";
 import { useAuthStore } from "../store/authStore";
@@ -106,6 +107,10 @@ export default function CustomerDashboard() {
             </Button>
           )}
         </div>
+
+        {dashboard.status === "APPROVED" && walletAddress && (
+          <BankAccessSection walletAddress={walletAddress} />
+        )}
       </div>
     </div>
   );
