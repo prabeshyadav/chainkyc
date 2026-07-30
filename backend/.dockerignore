@@ -1,6 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Python
 venv/
+.venv/
 __pycache__/
-*.pyc
-*.sqlite3
-staticfiles/
+*.py[cod]
+*.pyo
+
+# Environment
 .env
+.env.*
+.env.example
+
+# Database
+*.sqlite3
+
+# Django
+staticfiles/
+media/
+
+# User uploads
+kyc_documents/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+Dockerfile
+docker-compose*.yml
