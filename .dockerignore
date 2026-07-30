@@ -1,0 +1,52 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Database
+db.sqlite3
+
+# Uploaded media
+media/
+kyc_documents/
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node modules (if frontend is inside the same repository)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# OS files
+.DS_Store
+Thumbs.db
