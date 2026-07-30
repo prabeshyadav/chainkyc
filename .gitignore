@@ -10,6 +10,12 @@ venv/
 .env
 kyc_documents/
 
+# Recovered images
+recovered_selfie.jpg
+recovered_id.jpg
+
+# Or ignore all jpg files in the backend root
+/*.jpg
 
 # Django
 staticfiles/
