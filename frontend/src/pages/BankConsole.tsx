@@ -1,13 +1,19 @@
 import { CheckCircle2, Clock, RefreshCw, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { api } from "../api/client";
 import CustomerList from "../components/Bank/CustomerList";
-import { Badge, SectionCard, Stat, TopBar } from "../components/ui";
+import { Badge, Button, SectionCard, Stat, TopBar } from "../components/ui";
 import { useBankCustomers } from "../queries/bank";
 import { useAuthStore } from "../store/authStore";
 
 export default function BankConsole() {
   const { walletAddress } = useAuthStore();
   const [query, setQuery] = useState("");
+  const [verificationResult, setVerificationResult] = useState<
+    Awaited<ReturnType<typeof api.verifyCustomerWallet>> | null
+  >(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const {
     data: customers = [],
     isLoading,
@@ -17,18 +23,40 @@ export default function BankConsole() {
     refetch,
   } = useBankCustomers(walletAddress);
 
-  const verified = customers.filter((c) => c.version).length;
+  const verified = customers.filter((c:any) => c.version).length;
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     const matching = term
-      ? customers.filter((c) => c.address.toLowerCase().includes(term))
+      ? customers.filter((c:any) => c.address.toLowerCase().includes(term))
       : customers;
 
     return [...matching].sort(
       (a, b) => (b.verifiedAt ?? 0) - (a.verifiedAt ?? 0),
     );
   }, [customers, query]);
+
+  async function handleGetVerification() {
+    const wallet = query.trim();
+    if (!wallet) {
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationError(null);
+
+    try {
+      const result = await api.verifyCustomerWallet(wallet);
+      setVerificationResult(result);
+    } catch (err) {
+      setVerificationError(
+        err instanceof Error ? err.message : "Unable to fetch verification data.",
+      );
+      setVerificationResult(null);
+    } finally {
+      setIsVerifying(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,6 +125,13 @@ export default function BankConsole() {
                 placeholder="Search by wallet address"
                 className="w-full rounded-lg border border-line pl-9 pr-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-transparent"
               />
+              <Button
+                type="button"
+                onClick={handleGetVerification}
+                disabled={!query.trim() || isVerifying}
+              >
+                {isVerifying ? "Loading..." : "Get"}
+              </Button>
             </div>
           )}
 
@@ -107,6 +142,21 @@ export default function BankConsole() {
             error={error}
             filtered={query.trim().length > 0}
           />
+
+          {verificationError && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {verificationError}
+            </div>
+          )}
+
+          {verificationResult && (
+            <div className="mt-4 rounded-lg border border-line bg-gray-50 p-4">
+              <p className="text-sm font-medium text-ink-900">Verification response</p>
+              <pre className="mt-2 whitespace-pre-wrap text-xs text-ink-600">
+                {JSON.stringify(verificationResult, null, 2)}
+              </pre>
+            </div>
+          )}
         </SectionCard>
       </div>
     </div>
