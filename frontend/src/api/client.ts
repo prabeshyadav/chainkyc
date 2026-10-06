@@ -214,6 +214,11 @@ export const api = {
     }),
 
   getMe: () => request<MeResponse>("/auth/me"),
+  
+  verifyCustomerWallet: (walletAddress: string) =>
+    request<AdminActionResponse>(`/banks/verify/${walletAddress}`, {
+      method: "GET",
+    }),
 
   getUserDashboard: () => request<UserDashboardResponse>("/user/dashboard"),
 
