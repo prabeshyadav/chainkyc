@@ -36,11 +36,17 @@ DEFAULT_RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
 
 
 def _build_proof_payload(submission: KYCSubmission, salt: str) -> dict:
+    # ``document_type`` lives on the uploaded identity document, not on the
+    # submission itself (the KYC model was refactored to a related
+    # ``KYCDocument`` table).
+    identity_document = submission.identity_document
     return {
         "submission_id": str(submission.id),
         "wallet_address": submission.user.wallet_address,
         "full_name": submission.full_name,
-        "document_type": submission.document_type,
+        "document_type": (
+            identity_document.document_type if identity_document else None
+        ),
         "document_number": submission.document_number,
         "nationality": submission.nationality,
         "salt": salt,
